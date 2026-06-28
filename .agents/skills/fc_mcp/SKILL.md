@@ -1,6 +1,6 @@
 ---
 name: fc_mcp
-description: ตั้งค่า mcp stting ของ fourcorners-tlex
+description: ตั้งค่า mcp setting ของ fourcorners-tlex
 ---
 # Prerequisites & Authentication
 - ระบบต้องการรหัส FC_API_KEY ในการเข้าถึงเพื่อเรียกใช้งาน mcp  fourcorners-tlex ระบบตรวจสอบไฟล์ .env ใน Root Directoryหากยังไม่มีไฟล์ .env ให้สร้างไฟล์ดังกล่าวขึ้นมาใหม่ทันที

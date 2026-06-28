@@ -11,9 +11,17 @@
 thlawdeka/
 ├── .agents/
 │   ├── AGENTS.md                  # Project-scoped rules (กำหนดพฤติกรรมและโครงสร้าง 10 หัวข้อ)
+│   ├── mcp_config.json            # ไฟล์ตั้งค่าสำหรับเชื่อมต่อ MCP (fourcorners-tlex)
 │   └── skills/
+│       ├── api_key_setup/
+│       │   └── SKILL.md           # ความสามารถตั้งค่า API Key แบบ Interactive
+│       ├── deka_search/
+│       │   └── SKILL.md           # ความสามารถค้นหาย่อฎีกาผ่าน SLegalTools
+│       ├── fc_mcp/
+│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting
 │       └── thai_legal_advisor/
-│           └── SKILL.md           # Custom Skill (เรียกใช้งานแบบ On-demand)
+│           └── SKILL.md           # ความสามารถวิเคราะห์คดี/ข้อกฎหมายไทย 10 หัวข้อ
+├── .env                           # เก็บข้อมูล API Keys (DEKA_API_KEY, FC_API_KEY)
 └── README.md                      # คำอธิบายการใช้งาน (ไฟล์นี้)
 ```
 
@@ -23,6 +31,38 @@ thlawdeka/
 
 1. **เปิดโฟลเดอร์โปรเจกต์ใน Antigravity CLI หรือ Desktop**
    ระบบ Antigravity จะโหลดการตั้งค่าทั้งหมดจากโฟลเดอร์ `.agents/` โดยอัตโนมัติ
+
+2. **ตั้งค่า API Key เพื่อใช้ค้นหาเลขที่คำพิพากษาศาลฎีกา**
+   ระบบรองรับการค้นหาและตรวจสอบความถูกต้องของเลขที่ฎีกาผ่าน 2 บริการหลัก โดยต้องบันทึกค่าไว้ในไฟล์ `.env` ที่ Root Directory ของโปรเจกต์:
+
+   * สร้างไฟล์ `.env` ไว้ที่ Root ของโปรเจกต์ (หากยังไม่มี)
+   * กำหนดค่า API Key ตามบริการที่ต้องการใช้งาน:
+     ```env
+     DEKA_API_KEY=your_slegaltools_api_key_here
+     FC_API_KEY=your_fourcorners_api_key_here
+     ```
+
+   * **การตั้งค่าอัตโนมัติ:**
+     คุณสามารถใช้ความสามารถ (Skill) ของโปรเจกต์ในการตั้งค่าได้โดยพิมพ์บอกเอเจนต์ว่า:
+     ```text
+     setup api key
+     ```
+     ระบบจะถามและบันทึกข้อมูลลงในไฟล์ `.env` รวมถึงสร้างไฟล์การตั้งค่า MCP Server ที่จำเป็นใน `.agents/mcp_config.json` ให้โดยอัตโนมัติ
+
+---
+
+## 🔍 บริการค้นหาคำพิพากษาศาลฎีกา (Supreme Court Search Services)
+
+ก่อนที่จะส่งมอบผลลัพธ์ใน**หัวข้อที่ 9 (แนวโน้มคำตัดสินของศาลฎีกา)** ระบบจะถามผู้ใช้ก่อนเสมอว่าต้องการใช้บริการใดในการตรวจสอบความถูกต้องของเลขที่ฎีกา:
+
+1. **fourcorners** (ใช้ MCP Tool: `fourcorners-tlex`)
+   * ค้นหาและตรวจสอบข้อมูลผ่านบริการของ Fourcorners Law
+   * ต้องตั้งค่า `FC_API_KEY` และระบบจะใช้งานผ่านไฟล์คอนฟิก `.agents/mcp_config.json`
+2. **slegaltools** (ใช้ Custom Skill: `deka_search`)
+   * ค้นหาและดึงย่อคำพิพากษาศาลฎีกาผ่านระบบ SLegalTools
+   * ต้องตั้งค่า `DEKA_API_KEY` ในไฟล์ `.env`
+3. **ไม่ใช้บริการทั้งคู่**
+   * ระบบจะไม่ทำการส่งค้นหาภายนอก และจะลบข้อความที่เป็นเลขที่คำพิพากษาศาลฎีกาออกเพื่อป้องกันความผิดพลาดของข้อมูลตัวเลข (Hallucination)
 
 ---
 
