@@ -11,14 +11,14 @@
 thlawdeka/
 ├── .agents/
 │   ├── AGENTS.md                  # Project-scoped rules (กำหนดพฤติกรรมและโครงสร้าง 10 หัวข้อ)
-│   ├── mcp_config.json            # ไฟล์ตั้งค่าสำหรับเชื่อมต่อ MCP (fourcorners-tlex)
+│   ├── mcp_config.json            # ไฟล์ตั้งค่าสำหรับเชื่อมต่อ MCP (fourcorners-tlex & slegaltools-legal-v2)
 │   └── skills/
 │       ├── api_key_setup/
 │       │   └── SKILL.md           # ความสามารถตั้งค่า API Key แบบ Interactive
-│       ├── deka_search/
-│       │   └── SKILL.md           # ความสามารถค้นหาย่อฎีกาผ่าน SLegalTools
 │       ├── fc_mcp/
-│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting
+│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ fourcorners-tlex
+│       ├── sl_mcp/
+│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ slegaltools-legal-v2
 │       └── thai_legal_advisor/
 │           └── SKILL.md           # ความสามารถวิเคราะห์คดี/ข้อกฎหมายไทย 10 หัวข้อ
 ├── .env                           # เก็บข้อมูล API Keys (DEKA_API_KEY, FC_API_KEY)
@@ -47,7 +47,11 @@ thlawdeka/
      ```text
      setup api key
      ```
-     ระบบจะถามและบันทึกข้อมูลลงในไฟล์ `.env` รวมถึงสร้างไฟล์การตั้งค่า MCP Server ที่จำเป็นใน `.agents/mcp_config.json` ให้โดยอัตโนมัติ
+     หรือสำหรับการตั้งค่า MCP slegaltools:
+     ```text
+     set mcp slegaltools
+     ```
+     ระบบจะดาวน์โหลด ติดตั้ง venv และบันทึกข้อมูลการเชื่อมต่อ MCP Server ลงใน `.agents/mcp_config.json` ให้โดยอัตโนมัติ
 
 ---
 
@@ -58,9 +62,9 @@ thlawdeka/
 1. **fourcorners** (ใช้ MCP Tool: `fourcorners-tlex`)
    * ค้นหาและตรวจสอบข้อมูลผ่านบริการของ Fourcorners Law
    * ต้องตั้งค่า `FC_API_KEY` และระบบจะใช้งานผ่านไฟล์คอนฟิก `.agents/mcp_config.json`
-2. **slegaltools** (ใช้ Custom Skill: `deka_search`)
+2. **slegaltools** (ใช้ MCP Tool: `slegaltools-legal-v2`)
    * ค้นหาและดึงย่อคำพิพากษาศาลฎีกาผ่านระบบ SLegalTools
-   * ต้องตั้งค่า `DEKA_API_KEY` ในไฟล์ `.env`
+   * ต้องตั้งค่า `DEKA_API_KEY` และตั้งค่าเชื่อมต่อ MCP (ทำโดยอัตโนมัติผ่าน skill `sl_mcp`)
 3. **ไม่ใช้บริการทั้งคู่**
    * ระบบจะไม่ทำการส่งค้นหาภายนอก และจะลบข้อความที่เป็นเลขที่คำพิพากษาศาลฎีกาออกเพื่อป้องกันความผิดพลาดของข้อมูลตัวเลข (Hallucination)
 
