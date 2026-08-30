@@ -1,3 +1,7 @@
 # Environment variables and API keys (Security risks!)
 .env
 .agents/mcp_config.json
+
+# Output directory
+output/
+
