@@ -18,7 +18,7 @@ thlawdeka/
 │       ├── fc_mcp/
 │       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ fourcorners-tlex
 │       ├── sl_mcp/
-│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ fourcorners-tlex
+│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ slegaltools
 │       ├── tl_mcp/
 │       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ thai-legal
 │       └── legal_advisor/
