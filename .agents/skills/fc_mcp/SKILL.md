@@ -3,11 +3,16 @@ name: fc_mcp
 description: ตั้งค่า mcp setting ของ fourcorners-tlex
 ---
 # Prerequisites & Authentication
-- ระบบต้องการรหัส FC_API_KEY ในการเข้าถึงเพื่อเรียกใช้งาน mcp  fourcorners-tlex ระบบตรวจสอบไฟล์ .env ใน Root Directoryหากยังไม่มีไฟล์ .env ให้สร้างไฟล์ดังกล่าวขึ้นมาใหม่ทันที
-- prompt  user input api key , ใหั user paste key แบบ interactive จากนั้น เพิ่มค่า API key ที่ได้ นำมาบันทึกเพิ่มลงในไฟล์ .env ในรูปแบบดังนี้  FC_API_KEY=your_actual_api_key_here
+- ระบบต้องการรหัส FC_API_KEY ในการเข้าถึงเพื่อเรียกใช้งาน mcp `fourcorners-tlex` ระบบตรวจสอบไฟล์ `.env` ใน Root Directory หากยังไม่มีไฟล์ `.env` ให้สร้างไฟล์ดังกล่าวขึ้นมาใหม่ทันที
+- Prompt ขอ User input API key ให้ User paste key แบบ Interactive จากนั้นนำค่า API key ที่ได้มาบันทึกลงในไฟล์ `.env` ในรูปแบบ:
+  ```env
+  FC_API_KEY=your_actual_api_key_here
+  ```
 
-# mcp setting
-- แก้ไขไฟล์ .agents/mcp_config.json (ถ้ายังไม่มีไฟล์ ให้สร้างขึ้นใหม่) โดยนำค่า FC_API_KEY จากไฟล์  .env  ไปแทนที่ค่า FC_API_KEY ข้างล่าง  แล้วบันทึก
+# MCP Configuration Setup
+- แก้ไขไฟล์ `.agents/mcp_config.json` โดยทำการ **เพิ่มหรืออัปเดต (Merge)** ค่าคอนฟิกของ `fourcorners-tlex` ภายใต้คีย์ `mcpServers` โดยต้อง**คงการตั้งค่าของ Server อื่นๆ ที่มีอยู่เดิม (เช่น `slegaltools-legal-v2`) ไว้เสมอ ห้ามเขียนทับทั้งไฟล์**
+- ตัวอย่างโครงสร้างคอนฟิกของ `fourcorners-tlex` ภายใน `mcpServers`:
+```json
 {
   "mcpServers": {
     "fourcorners-tlex": {
@@ -19,3 +24,5 @@ description: ตั้งค่า mcp setting ของ fourcorners-tlex
     }
   }
 }
+```
+*(หมายเหตุ: แทนที่ `FC_API_KEY` ด้วยค่าจริงที่อ่านได้จากไฟล์ `.env`)*
