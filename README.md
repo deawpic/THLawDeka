@@ -18,15 +18,27 @@ thlawdeka/
 │       ├── fc_mcp/
 │       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ fourcorners-tlex
 │       ├── sl_mcp/
-│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ slegaltools-legal-v2
-│       └── thai_legal_advisor/
+│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ fourcorners-tlex
+│       ├── tl_mcp/
+│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ thai-legal
+│       └── legal_advisor/
 │           └── SKILL.md           # ความสามารถวิเคราะห์คดี/ข้อกฎหมายไทย 10 หัวข้อ
-├── .env                           # เก็บข้อมูล API Keys (DEKA_API_KEY, FC_API_KEY)
+├── .env                           # เก็บข้อมูล API Keys (DEKA_API_KEY, FC_API_KEY, TL_API_KEY)
 └── README.md                      # คำอธิบายการใช้งาน (ไฟล์นี้)
 ```
 
 ---
+## 💬 ข้อมูลที่ต้องเตรียมก่อนติดตั้ง
 
+หากท่านต้องการเลขที่ฎีกาเทียบเคียง เนื่องจากมีการใช้บริการค้นหาฎีกา 3 บริการ ท่านจึงต้องเตรียม API KEY จากบริการเหล่านี้ :
+
+1. https://app.fourcorners.law/settings?tab=mcp    ** FourCorners
+
+2. https://api.slegaltools.digital/dashboard     ** SLegalTools
+
+3. https://legaltech.in.th/dashboard/api-keys     ** Thai Legal
+
+---
 ## 🛠️ วิธีการติดตั้งและเริ่มใช้งาน (Getting Started)
 
 1. **เปิดโฟลเดอร์โปรเจกต์ใน Antigravity CLI หรือ Desktop**
@@ -40,12 +52,18 @@ thlawdeka/
      ```env
      DEKA_API_KEY=your_slegaltools_api_key_here
      FC_API_KEY=your_fourcorners_api_key_here
+     TL_API_KEY=your_thailegal_api_key_here
      ```
 
    * **การตั้งค่าอัตโนมัติผ่าน Skill:**
      คุณสามารถสั่งให้เอเจนต์ช่วยตั้งค่าได้ง่าย ๆ โดยพิมพ์บอกเอเจนต์ว่า:
      ```text
      setup api key
+     ```
+     หรือ 
+      ```text
+     set mcp fourcorners
+     set mcp thailegal
      ```
      หรือสำหรับการตั้งค่า MCP slegaltools:
      ```text
@@ -70,13 +88,16 @@ thlawdeka/
 
 กรณีที่ผู้ใช้ขอคำตอบแบบ 10 ข้อ ระบบจะสอบถามก่อนว่าต้องการค้นหาฎีกาเทียบเคียงด้วยบริการใดใน**หัวข้อที่ 9 (แนวโน้มคำตัดสินของศาลฎีกา)**:
 
-1. **fourcorners** (ใช้ MCP Tool: `fourcorners-tlex`)
+1. **fourcorners** (ใช้ MCP : `fourcorners-tlex`)
    * ค้นหาและตรวจสอบข้อมูลผ่านบริการของ Fourcorners Law
    * ต้องตั้งค่า `FC_API_KEY` และระบบจะใช้งานผ่านไฟล์คอนฟิก `.agents/mcp_config.json`
-2. **slegaltools** (ใช้ MCP Tool: `slegaltools-legal-v2`)
+2. **slegaltools** (ใช้ MCP : `slegaltools-legal-v2`)
    * ค้นหาและดึงย่อคำพิพากษาศาลฎีกาผ่านระบบ SLegalTools
    * ต้องตั้งค่า `DEKA_API_KEY` และตั้งค่าเชื่อมต่อ MCP (ทำโดยอัตโนมัติผ่าน skill `sl_mcp`)
-3. **ไม่ใช้บริการทั้งคู่**
+3. **thailegal** (ใช้ MCP : `thai-legal`)
+   * ค้นหาและตรวจสอบข้อมูลผ่านบริการของ Thai Legal
+   * ต้องตั้งค่า `TL_API_KEY` และระบบจะใช้งานผ่านไฟล์คอนฟิก `.agents/mcp_config.json`
+4. **ไม่ใช้บริการ**
    * ระบบจะไม่ทำการส่งค้นหาภายนอก และจะลบข้อความที่เป็นเลขที่คำพิพากษาศาลฎีกาออกเพื่อป้องกันความผิดพลาดของข้อมูลตัวเลข (Hallucination)
 
 ---
