@@ -1,7 +1,49 @@
-# Environment variables and API keys (Security risks!)
+# ==========================================
+# 1. Security & Secrets (ห้ามนำขึ้น Git เด็ดขาด)
+# ==========================================
 .env
+.env.*
+!.env.example
 .agents/mcp_config.json
+!.agents/mcp_config.example.json
+*.pem
+*.key
 
-# Output directory
+# ==========================================
+# 2. Python & Testing Artifacts (ไฟล์แคชจากการรันเทสต์)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==========================================
+# 3. Virtual Environments (สภาพแวดล้อม Python)
+# ==========================================
+.venv/
+venv/
+ENV/
+env/
+slegaltools-legal-v2-mcp/
+
+# ==========================================
+# 4. Project Generated Outputs & Logs
+# ==========================================
 output/
+*.log
+scratch/
+tmp/
 
+# ==========================================
+# 5. OS & Editor Specific Files
+# ==========================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

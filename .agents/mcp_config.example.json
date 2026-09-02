@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "fourcorners-tlex": {
+      "type": "http",
+      "url": "https://app.fourcorners.law/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_FOURCORNERS_API_KEY"
+      }
+    },
+    "slegaltools-legal-v2": {
+      "command": "python",
+      "args": [
+        "path/to/slegaltools_deka_mcp_bridge.py"
+      ],
+      "env": {
+        "SLEGALTOOLS_BASE_URL": "https://api.slegaltools.digital",
+        "SLEGALTOOLS_API_KEY": "YOUR_SLEGALTOOLS_API_KEY"
+      }
+    },
+    "thai-legal": {
+      "type": "http",
+      "url": "https://mcp.legaltech.in.th/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_THAI_LEGAL_API_KEY"
+      }
+    }
+  }
+}

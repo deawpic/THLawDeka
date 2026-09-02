@@ -1,7 +1,7 @@
-# Thai Legal Intelligence Advisor (AGY Project) ⚖️
+# Thai Legal Intelligence Advisor (AGY Project - Harness v2.0) ⚖️
 **ผู้ช่วยผู้เชี่ยวชาญด้านกฎหมายไทยและทนายความผู้มีความรอบรู้ (Thai Legal Intelligence Advisor)**
 
-โปรเจกต์นี้เป็นการแปลง **Gemini Gem** สำหรับคำปรึกษาทางกฎหมายไทยให้เป็น **Google Antigravity (AGY) Project** ที่สมบูรณ์ โดยรองรับการใช้งานผ่าน **Workspace Customizations (Rules & Skills)** ในระบบ Antigravity
+โปรเจกต์นี้เป็นการแปลง **Gemini Gem** สำหรับคำปรึกษาทางกฎหมายไทยให้เป็น **Google Antigravity (AGY) Project** ที่สมบูรณ์ พร้อมระบบ **Agent Harness v2.0** ที่ผสานการวิเคราะห์แบบ **IRAC (Issue, Rule, Application, Conclusion)**, ระบบรักษาเสถียรภาพ MCP, ระบบตรวจสอบคำอ้างอิงและเลขฎีกา (Anti-Hallucination & Anti-Sycophancy) และชุดทดสอบทางกฎหมายอัตโนมัติ (Benchmark Testbed)
 
 ---
 
@@ -10,35 +10,38 @@
 ```text
 thlawdeka/
 ├── .agents/
-│   ├── AGENTS.md                  # Project-scoped rules (กำหนดพฤติกรรมการตอบกลับและรูปแบบ 10 หัวข้อ)
-│   ├── mcp_config.json            # ไฟล์ตั้งค่าสำหรับเชื่อมต่อ MCP (fourcorners-tlex & slegaltools-legal-v2)
+│   ├── AGENTS.md                  # Project-scoped rules (Harness v2.0: กฎ 10 หัวข้อ, IRAC, Guardrails 5 ชั้น)
+│   ├── mcp_config.json            # ไฟล์ตั้งค่าสำหรับเชื่อมต่อ MCP (fourcorners-tlex, slegaltools-legal-v2, thai-legal)
 │   └── skills/
-│       ├── api_key_setup/
-│       │   └── SKILL.md           # ความสามารถตั้งค่า API Key แบบ Interactive
-│       ├── fc_mcp/
-│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ fourcorners-tlex
-│       ├── sl_mcp/
-│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ slegaltools
-│       ├── tl_mcp/
-│       │   └── SKILL.md           # ความสามารถตั้งค่า mcp setting ของ thai-legal
-│       └── legal_advisor/
-│           └── SKILL.md           # ความสามารถวิเคราะห์คดี/ข้อกฎหมายไทย 10 หัวข้อ
+│       ├── legal_advisor/         # [Core] ความสามารถวิเคราะห์คดี/ข้อกฎหมายไทย 10 หัวข้อ (IRAC Framework)
+│       ├── legal_fact_elicitation/# [New] ระบบสกัดและซักถามข้อเท็จจริงสำคัญ (อายุความ/สัญญา) ก่อนวิเคราะห์
+│       ├── deka_citation_verifier/# [New] ระบบตรวจสอบความถูกต้องของเลขฎีกาและตัวบท ป้องกันข้อมูลหลอน
+│       ├── mcp_resilience_guardian/# [New] ระบบจัดการ 429 Rate Limit, Exponential Backoff และ Fallback
+│       ├── api_key_setup/         # ความสามารถตั้งค่า API Key แบบ Interactive
+│       ├── fc_mcp/                # ความสามารถตั้งค่า MCP setting ของ fourcorners-tlex
+│       ├── sl_mcp/                # ความสามารถตั้งค่า MCP setting ของ slegaltools
+│       └── tl_mcp/                # ความสามารถตั้งค่า MCP setting ของ thai-legal
+├── tests/                         # [New] Evaluation & Benchmark Testbed
+│   ├── benchmark_cases.json       # ชุดคดีทดสอบมาตรฐาน (แพ่ง, อาญา, แรงงาน, ผู้บริโภค)
+│   ├── test_legal_benchmarks.py   # Unit tests ตรวจสอบความถูกต้องของโครงสร้างกฎหมายและการตรวจจับเลขฎีกาหลอน
+│   └── test_mcp_resilience.py     # Unit tests ทดสอบ Fault Injection, Exponential Backoff และ MCP Config
 ├── .env                           # เก็บข้อมูล API Keys (DEKA_API_KEY, FC_API_KEY, TL_API_KEY)
+├── output/                        # โฟลเดอร์สำหรับบันทึกผลลัพธ์ UTF-8
 └── README.md                      # คำอธิบายการใช้งาน (ไฟล์นี้)
 ```
 
 ---
+
 ## 💬 ข้อมูลที่ต้องเตรียมก่อนติดตั้ง
 
 หากท่านต้องการเลขที่ฎีกาเทียบเคียง เนื่องจากมีการใช้บริการค้นหาฎีกา 3 บริการ ท่านจึงต้องเตรียม API KEY จากบริการเหล่านี้ :
 
 1. https://app.fourcorners.law/settings?tab=mcp    ** FourCorners
-
 2. https://api.slegaltools.digital/dashboard     ** SLegalTools
-
 3. https://legaltech.in.th/dashboard/api-keys     ** Thai Legal
 
 ---
+
 ## 🛠️ วิธีการติดตั้งและเริ่มใช้งาน (Getting Started)
 
 1. **เปิดโฟลเดอร์โปรเจกต์ใน Antigravity CLI หรือ Desktop**
@@ -46,99 +49,74 @@ thlawdeka/
 
 2. **ตั้งค่า API Key เพื่อใช้ค้นหาเลขที่คำพิพากษาศาลฎีกา**
    ระบบรองรับการค้นหาและตรวจสอบความถูกต้องของเลขที่ฎีกาผ่าน 3 บริการหลัก โดยบันทึกค่าไว้ในไฟล์ `.env` ที่ Root Directory:
-
-   * สร้างไฟล์ `.env` ไว้ที่ Root ของโปรเจกต์ (หากยังไม่มี)
-   * กำหนดค่า API Key ตามบริการที่ต้องการใช้งาน:
-     ```env
-     DEKA_API_KEY=your_slegaltools_api_key_here
-     FC_API_KEY=your_fourcorners_api_key_here
-     TL_API_KEY=your_thailegal_api_key_here
-     ```
+   ```env
+   DEKA_API_KEY=your_slegaltools_api_key_here
+   FC_API_KEY=your_fourcorners_api_key_here
+   TL_API_KEY=your_thailegal_api_key_here
+   ```
 
    * **การตั้งค่าอัตโนมัติผ่าน Skill:**
-     คุณสามารถสั่งให้เอเจนต์ช่วยตั้งค่าได้ง่าย ๆ โดยพิมพ์บอกเอเจนต์ว่า:
+     พิมพ์บอกเอเจนต์:
      ```text
      setup api key
      ```
-     หรือ 
-      ```text
+     หรือสำหรับการตั้งค่า MCP เฉพาะค่าย:
+     ```text
      set mcp fourcorners
+     set mcp slegaltools
      set mcp thailegal
      ```
-     หรือสำหรับการตั้งค่า MCP slegaltools:
-     ```text
-     set mcp slegaltools
-     ```
-     ระบบจะดาวน์โหลด ติดตั้ง venv และบันทึกข้อมูลการเชื่อมต่อ MCP Server ลงใน `.agents/mcp_config.json` ให้โดยอัตโนมัติ
 
 ---
 
-## 💬 รูปแบบการตอบกลับ (Response Modes)
-
-ระบบได้รับการออกแบบให้ตอบสนอง 2 รูปแบบตามความต้องการของผู้ใช้:
+## 💬 รูปแบบการตอบกลับและกระบวนการทำงาน (Response Modes & Workflow)
 
 1. **การตอบแบบทั่วไปเป็นลำดับแรกเสมอ (Default - General Response)**:
-   * ให้คำปรึกษา วิเคราะห์ข้อกฎหมาย และแนวทางปฏิบัติอย่างกระชับ ตรงประเด็น และเข้าใจง่าย เหมาะสำหรับการปรึกษาเบื้องต้นทั่วไป
+   * ให้คำปรึกษา วิเคราะห์ข้อกฎหมาย และแนวทางปฏิบัติอย่างกระชับ ตรงประเด็น และเข้าใจง่าย
 2. **การตอบแบบโครงสร้าง 10 ข้อ (10 Topics on Explicit Request)**:
-   * เมื่อผู้ใช้ระบุหรือเน้นย้ำว่าต้องการ **"แบบ 10 ข้อ"** หรือ **"สรุป 10 หัวข้อ"** ระบบจะจัดรูปแบบผลลัพธ์ตามโครงสร้าง 10 หัวข้ออย่างละเอียด พร้อมเข้าสู่ขั้นตอนเลือกบริการค้นหาฎีกาเทียบเคียง
+   * เมื่อผู้ใช้ระบุว่าต้องการ **"แบบ 10 ข้อ"** หรือ **"สรุป 10 หัวข้อ"** ระบบจะดำเนินกระบวนการดังนี้:
+     1. **Fact Intake**: หากข้อเท็จจริงขาดมิติสำคัญ (เช่น วันที่เกิดเหตุ/อายุความ หรือหลักฐานสัญญา) ระบบจะซักถามสั้นๆ 2-3 ข้อ (`legal_fact_elicitation`)
+     2. **ถามบริการค้นหาฎีกา**: ให้ผู้ใช้เลือกว่าต้องการใช้ fourcorners, slegaltools, thailegal หรือไม่ใช้บริการ
+     3. **วิเคราะห์ด้วย IRAC Framework**: จัดโครงสร้าง 10 หัวข้ออย่างเป็นระบบ
+     4. **สืบค้นและป้องกันข้อผิดพลาด**: ค้นหาผ่าน MCP ด้วยการควบคุมของ `mcp_resilience_guardian` (มี Backoff Retry) และตรวจทานความถูกต้องด้วย `deka_citation_verifier`
 
 ---
 
-## 🔍 บริการค้นหาคำพิพากษาศาลฎีกา (Supreme Court Search Services)
-
-กรณีที่ผู้ใช้ขอคำตอบแบบ 10 ข้อ ระบบจะสอบถามก่อนว่าต้องการค้นหาฎีกาเทียบเคียงด้วยบริการใดใน**หัวข้อที่ 9 (แนวโน้มคำตัดสินของศาลฎีกา)**:
-
-1. **fourcorners** (ใช้ MCP : `fourcorners-tlex`)
-   * ค้นหาและตรวจสอบข้อมูลผ่านบริการของ Fourcorners Law
-   * ต้องตั้งค่า `FC_API_KEY` และระบบจะใช้งานผ่านไฟล์คอนฟิก `.agents/mcp_config.json`
-2. **slegaltools** (ใช้ MCP : `slegaltools-legal-v2`)
-   * ค้นหาและดึงย่อคำพิพากษาศาลฎีกาผ่านระบบ SLegalTools
-   * ต้องตั้งค่า `DEKA_API_KEY` และตั้งค่าเชื่อมต่อ MCP (ทำโดยอัตโนมัติผ่าน skill `sl_mcp`)
-3. **thailegal** (ใช้ MCP : `thai-legal`)
-   * ค้นหาและตรวจสอบข้อมูลผ่านบริการของ Thai Legal
-   * ต้องตั้งค่า `TL_API_KEY` และระบบจะใช้งานผ่านไฟล์คอนฟิก `.agents/mcp_config.json`
-4. **ไม่ใช้บริการ**
-   * ระบบจะไม่ทำการส่งค้นหาภายนอก และจะลบข้อความที่เป็นเลขที่คำพิพากษาศาลฎีกาออกเพื่อป้องกันความผิดพลาดของข้อมูลตัวเลข (Hallucination)
-
----
-
-## 🚀 วิธีการใช้งาน (Usage)
-
-### 1. การใช้งานผ่าน CLI หลักของ Antigravity (`agy`)
-เนื่องจากเราได้ตั้งค่า **Workspace Customization** ไว้ในโฟลเดอร์ `.agents/` แล้ว เมื่อคุณใช้คำสั่ง `agy` ภายในโฟลเดอร์นี้ ตัว AI จะดึงกฎใน `AGENTS.md` มาใช้งานโดยอัตโนมัติ
-
-* **เริ่มพิมพ์คุยโต้ตอบกับที่ปรึกษากฎหมาย:**
-  ```bash
-  agy
-  ```
-  *(จากนั้นพิมพ์ข้อความอธิบายสถานการณ์ของคุณได้ทันที)*
-
-### 2. การใช้งานผ่าน Antigravity Desktop
-เพียงเปิดโฟลเดอร์โปรเจกต์นี้ในโปรแกรม Antigravity Desktop และเริ่มแชทคุย ระบบจะนำกฎเกณฑ์ทั้งหมดที่ตั้งค่าไว้มาใช้ทันที
-
----
-
-## 📋 โครงสร้างผลลัพธ์ 10 หัวข้อ (Output Schema เมื่อร้องขอ)
-
-เมื่อผู้ใช้ระบุขอแบบ 10 ข้อ ผลลัพธ์จะจัดเรียงตามหัวข้อดังนี้:
+## 📋 โครงสร้างผลลัพธ์ 10 หัวข้อ (10 Topics Output Schema)
 
 1. **บทสรุปของสถานการณ์ว่าเข้าข่ายประเด็นอะไร (Summary)** - สรุปเนื้อหาของคดีหรือข้อขัดแย้ง
 2. **หมวดหมู่สำหรับข้อกฎหมายหลัก (Category)** - แยกแยะหมวดหมู่กฎหมาย เช่น กฎหมายครอบครัว, กฎหมายแรงงาน
-3. **รายการของข้อกฎหมาย/มาตราที่เกี่ยวข้องโดยตรง (Laws)** - ระบุชื่อกฎหมาย เลขมาตรา สรุปมาตรา และเหตุผลที่เกี่ยวข้อง
+3. **รายการของข้อกฎหมาย/มาตราที่เกี่ยวข้องโดยตรง (Laws & Statutes - IRAC)** - ระบุชื่อกฎหมาย เลขมาตรา สาระสำคัญ และการปรับใช้กับข้อเท็จจริง (Application)
 4. **ประเภทคดีเป็นภาษาไทย (Case Category)** - เช่น คดีแพ่ง, คดีอาญา, คดีผู้บริโภค
-5. **ประเภทของศาลที่ตัดสินคดีนี้โดยตรง (Competent Court)** - เช่น ศาลอาญา, ศาลแพ่ง, ศาลแรงงาน
-6. **แนวทางต่อสู้คดีของ โจทก์ / ผู้ร้อง / ผู้เสียหาย (Plaintiff Strategy)** - วิธีการรวบรวมหลักฐานและสิทธิเรียกร้อง
-7. **แนวทางต่อสู้คดีของ จำเลย / ผู้ถูกกล่าวหา (Defendant Strategy)** - แนวทางแก้ต่างและการปฏิเสธข้อกล่าวหา
+5. **ประเภทของศาลที่ตัดสินคดีนี้โดยตรง (Competent Court)** - เช่น ศาลอาญา, ศาลแพ่ง, ศาลแขวง, ศาลชำนัญพิเศษ
+6. **แนวทางต่อสู้คดีของ โจทก์ / ผู้ร้อง / ผู้เสียหาย (Plaintiff Strategy)** - วิธีการรวบรวมหลักฐาน, **ภาระการพิสูจน์ (Burden of Proof)**, **กำหนดอายุความ (Prescription Period)**
+7. **แนวทางต่อสู้คดีของ จำเลย / ผู้ถูกกล่าวหา (Defendant Strategy)** - แนวทางแก้ต่าง, การโต้แย้งภาระการพิสูจน์, การยกข้อต่อสู้เรื่อง **อายุความขาด**
 8. **แนวทางทำคดีของพนักงานสอบสวนหรือเจ้าหน้าที่ (Investigator Guideline)** - วิธีสืบสวนและการรวบรวมสำนวน
-9. **แนวโน้มคำตัดสินของศาลสูงสุด หรือศาลฎีกา (Supreme Court Trend)** - บรรทัดฐานคำตัดสินศาลฎีกาที่พึงเทียบเคียง
+9. **แนวโน้มคำตัดสินของศาลสูงสุด หรือศาลฎีกา (Supreme Court Trend)** - บรรทัดฐานคำตัดสินศาลฎีกาที่พึงเทียบเคียง (ผ่านการตรวจรับรองจาก MCP)
 10. **คำแนะนำเพิ่มเติมเพื่อความปลอดภัย (Advice)** - ข้อควรระวังและการปฏิบัติตัวขั้นเริ่มต้นเพื่อความปลอดภัย
 
 ---
 
-## 💾 การบันทึกไฟล์ (File Saving & Encoding)
-* หากผู้ใช้ขอให้บันทึกไฟล์ข้อมูล ให้บันทึกไฟล์ไว้ที่โฟลเดอร์ `./output` เสมอ (สร้างโฟลเดอร์ขึ้นมาหากยังไม่มี)
-* หากมีการบันทึกไฟล์เป็นชื่อภาษาไทย หรือมีเนื้อหาภาษาไทย ให้ใช้การเข้ารหัสแบบ **UTF-8 (Encoding: UTF-8)** เสมอ เพื่อป้องกันปัญหาตัวอักษรผิดเพี้ยน
+## 🧪 การรันชุดทดสอบ Evaluation & Benchmark Testbed
 
+ท่านสามารถรันการทดสอบ Unit Tests และ Regression Benchmarks เพื่อตรวจสอบความถูกต้องของระบบได้ตลอดเวลา:
+
+```bash
+python3 -m unittest discover -s tests -p "test_*.py" -v
+```
+
+ผลการทดสอบจะครอบคลุม:
+- ความครบถ้วนของ Schema 10 หัวข้อ
+- ความถูกต้องของชุดคดีตัวอย่างใน `benchmark_cases.json`
+- การทำงานของระบบป้องกันการแต่งเลขฎีกาหลอน (Deka Grounding Gate)
+- การคำนวณ Exponential Backoff with Jitter เมื่อเจอปัญหา Rate Limit 429
+- การทำงานของ Fault Injection และ Safe Fallback Protocol
+
+---
+
+## 💾 การบันทึกไฟล์ (File Saving & Encoding)
+* หากผู้ใช้ขอให้บันทึกไฟล์ข้อมูล ให้บันทึกไฟล์ไว้ที่โฟลเดอร์ `./output` เสมอ
+* เข้ารหัสแบบ **UTF-8 (Encoding: UTF-8)** เสมอ
 
 ---
 
