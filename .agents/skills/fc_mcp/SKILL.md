@@ -19,7 +19,8 @@ description: ตั้งค่า mcp setting ของ fourcorners-tlex
       "type": "http",
       "url": "https://app.fourcorners.law/api/mcp",
       "headers": {
-        "Authorization": "Bearer FC_API_KEY"
+        "Authorization": "Bearer FC_API_KEY",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
       }
     }
   }

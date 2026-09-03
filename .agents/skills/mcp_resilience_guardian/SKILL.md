@@ -18,9 +18,9 @@ tags: [mcp, resilience, retry, rate-limit, fallback, error-handling, thai-legal]
 | ประเภทข้อผิดพลาด (Failure Type) | อาการที่พบ (Symptoms) | การจัดการกู้คืน (Recovery Action) |
 | :--- | :--- | :--- |
 | **HTTP 429 Too Many Requests** | Upstream API ปฏิเสธคำขอชั่วคราว | สกัดค่า `Retry-After` หรือใช้ **Exponential Backoff with Full Jitter** (รอ 1s, 2s, 4s) สูงสุด 3 ครั้ง |
-| **Network Timeout / Hang** | เรียก Tool แล้วไม่มีการตอบสนองเกิน 15 วินาที | ทำการ Retry อีก 1 ครั้ง หากยัง Timeout ให้สลับสู่ Fallback Mode ทันที |
+| **Network Timeout / Hang** | เรียก Tool แล้วไม่มีการตอบสนอง | • **FourCorners T-LEX (`ask_tlex`)**: เป็น Deep Research Agent ต้องใช้เวลา 60-90 วินาทีต่อ 1 คำขอ **ต้องตั้ง Timeout ไม่น้อยกว่า 90-120 วินาที**<br>• **Fast Search (thai-legal, slegaltools)**: ตั้ง Timeout 15-30 วินาที<br>หากหมดเวลาตามกำหนด ทำการ Retry อีก 1 ครั้ง หากยัง Timeout ให้สลับสู่ Fallback Mode ทันที |
 | **JSON Malformed / Truncated** | Payload ไม่สมบูรณ์ หรือตัวอักษรภาษาไทยขาดหาย | ขอเฉพาะข้อมูลสรุปสั้นๆ (Summary only) หรือสกัดเฉพาะข้อความที่อ่านได้ |
-| **Authentication Error (401/403)** | API Key ใน `.env` ไม่ถูกต้องหรือหมดอายุ | แจ้งเตือนผู้ใช้ให้รัน skill `api_key_setup` และดำเนินกระบวนการต่อในโหมด Fallback |
+| **Authentication / Cloudflare Block (401/403)** | API Key ไม่ถูกต้อง หรือติด Cloudflare Error 1010 (User-Agent Blocked) | ตรวจสอบ `.env` สำหรับ API Key และตรวจสอบว่าใน `.agents/mcp_config.json` มีการระบุ `User-Agent` เบราว์เซอร์มาตรฐานเพื่อไม่ให้ถูก Cloudflare แบน |
 | **Server Error (500/502/503/504)** | เซิร์ฟเวอร์ต้นทางมีปัญหา | ลองใหม่ 1 ครั้งด้วยหน่วงเวลา 2 วินาที หากไม่สำเร็จให้ Fallback |
 
 ---
@@ -49,6 +49,9 @@ tags: [mcp, resilience, retry, rate-limit, fallback, error-handling, thai-legal]
 ---
 
 ## 4. Best Practices
+- ✅ **FourCorners T-LEX**: ส่งคำถามที่แคบและเจาะจงประเด็นเดียว (Single focused legal issue) เพื่อลดเวลาประมวลผล (หากถามกว้างจะใช้เวลาเกิน 60-75 วินาที)
+- ✅ **FourCorners Deka Extraction**: ตรวจสอบทั้ง `result.structuredContent.citations` และ `result.content[0].text` เพื่อดึงเลขฎีกาที่ระบบวิเคราะห์มาได้อย่างครบถ้วน
+- ✅ **Timeout Configuration**: เผื่อเวลา Timeout ให้ `fourcorners-tlex` อย่างน้อย 90-120 วินาที ป้องกันการตัดเข้า Safe Fallback Mode ก่อนได้รับผลลัพธ์
 - ✅ ปรับ Query คำค้นหาให้เป็นคำหลักเชิงกฎหมายก่อนส่งเข้า MCP
 - ✅ บันทึก Error Log เพื่อตรวจสอบสาเหตุ
 - ❌ ห้าม Retry ซ้ำเกิน 3 ครั้งเพื่อป้องกันการติดแบล็กลิสต์ IP
