@@ -33,6 +33,10 @@ slegaltools-legal-v2-mcp/
 # 4. Project Generated Outputs & Logs
 # ==========================================
 output/
+cache/
+*.db
+*.db-wal
+*.db-shm
 *.log
 scratch/
 tmp/
