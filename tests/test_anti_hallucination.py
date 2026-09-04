@@ -1,11 +1,16 @@
+import os
+import shutil
+import tempfile
 import unittest
 from tests.anti_hallucination_verifier import (
     extract_all_deka_numbers,
+    extract_all_statute_citations,
     detect_unverified_deka_citations,
     sanitize_hallucinated_deka_numbers,
     detect_absolute_guarantees,
     audit_response_for_hallucinations
 )
+from tests.legal_mcp_cache import LegalMcpCache
 
 class TestAntiHallucination(unittest.TestCase):
 
@@ -39,6 +44,36 @@ class TestAntiHallucination(unittest.TestCase):
         bad_text = "หากท่านนำสืบตามนี้ ท่านจะ ชนะคดีแน่นอน 100% อย่างแน่นอน"
         violations = detect_absolute_guarantees(bad_text)
         self.assertGreater(len(violations), 0)
+
+    def test_extract_all_statute_citations(self):
+        text = "อ้างอิงตาม ป.พ.พ. มาตรา 1378 และ ประมวลกฎหมายที่ดิน มาตรา 61 รวมถึง พ.ร.บ.คุ้มครองแรงงาน"
+        statutes = extract_all_statute_citations(text)
+        self.assertIn("ป.พ.พ.", statutes)
+        self.assertIn("ประมวลกฎหมายที่ดิน", statutes)
+        self.assertIn("พ.ร.บ.คุ้มครองแรงงาน", statutes)
+
+    def test_auto_grounding_via_cache_oracle(self):
+        temp_dir = tempfile.mkdtemp()
+        try:
+            db_path = os.path.join(temp_dir, "test_cache.db")
+            cache = LegalMcpCache(db_path=db_path)
+            cache.set(
+                provider="thai_legal",
+                tool_name="search_cases",
+                arguments={"query": "สิทธิครอบครอง"},
+                raw_payload={"results": [{"deka_citation": "คำพิพากษาศาลฎีกาที่ 15216/2551"}]}
+            )
+            text = "ตามคำพิพากษาศาลฎีกาที่ 15216/2551 เจ้าของเดิมสละการครอบครอง"
+            # Without cache or verified_payloads: fails
+            audit_fail = audit_response_for_hallucinations(text, verified_payloads=[])
+            self.assertFalse(audit_fail["passed"])
+            
+            # With cache auto-grounding: passes!
+            audit_pass = audit_response_for_hallucinations(text, cache=cache)
+            self.assertTrue(audit_pass["passed"])
+            self.assertEqual(len(audit_pass["unverified_deka_numbers"]), 0)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_audit_response_clean_pass(self):
         clean_text = (

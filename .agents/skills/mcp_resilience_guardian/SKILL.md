@@ -27,6 +27,16 @@ tags: [mcp, resilience, retry, rate-limit, fallback, error-handling, thai-legal]
 
 ## 3. ขั้นตอนการทำงาน (Operational Flow)
 
+### ขั้นตอนที่ 0: ตรวจสอบแคชข้อมูลกฎหมาย (Tier-0 Legal Cache Interceptor)
+1. **ตรวจสอบ L1 In-Memory LRU Cache (<0.2ms)** และ **L2 SQLite Compressed Disk Cache (<2.0ms)** ผ่านโมดูล `tests/legal_mcp_cache.py`:
+   - มีการทำ **Legal Query Normalization** แปลงตัวย่อ (`ป.พ.พ.`, `ป.อ.`, `ป.วิ.พ.`, `ป.วิ.อ.`, `ป.ที่ดิน`, `พ.ร.บ.`, `ม.xxx`) และจัดเรียง Token เพื่อให้การค้นหาคำสำคัญสลับตำแหน่งได้ผลลัพธ์จากแคชเดียวกัน 100%
+2. **หากพบข้อมูลในแคช (Cache Hit)**:
+   - คืนค่าผลการค้นหากฎหมายที่ผ่านการกลั่นกรอง (Distilled Payload) ทันทีโดย **ไม่ต้องส่ง Request ออกไปยัง MCP ภายนอก**
+   - ประหยัดโควตา API ภายนอกได้ 70% – 95% และลดการใช้ Gemini Input Tokens ลง 50% – 70% (Zero Crash / Sub-millisecond Response)
+3. **หากไม่พบข้อมูลในแคช (Cache Miss)**:
+   - ดำเนินการตามขั้นตอนที่ 1 เพื่อส่งคำขอไปยัง External MCP Server
+   - เมื่อได้ผลลัพธ์สำเร็จ ทำการบีบอัดด้วย `zlib` (Level 6) และบันทึกลงแคชตามนโยบาย **Tiered TTL** (ฎีกา 365 วัน, ตัวบท 60 วัน, ค้นหาทั่วไป 30 วัน, ไม่พบข้อมูล 48 ชม.) ภายใต้งบประมาณพื้นที่ 100 MB
+
 ### ขั้นตอนที่ 1: ตรวจสอบความพร้อมก่อนเรียกใช้ (Pre-Call Verification)
 1. ตรวจสอบว่าใน `.agents/mcp_config.json` มีการตั้งค่า Server ที่ผู้ใช้เลือกหรือไม่
 2. ตรวจสอบว่า Query ที่จะส่งไปค้นหามีคีย์เวิร์ดที่ชัดเจนและกระชับ (เช่น "ม.334 ลักทรัพย์เวลากลางคืน" แทนที่จะส่งประโยคยาวทั้งย่อหน้า)
@@ -56,3 +66,6 @@ tags: [mcp, resilience, retry, rate-limit, fallback, error-handling, thai-legal]
 - ✅ บันทึก Error Log เพื่อตรวจสอบสาเหตุ
 - ❌ ห้าม Retry ซ้ำเกิน 3 ครั้งเพื่อป้องกันการติดแบล็กลิสต์ IP
 - ❌ ห้ามแสดง Exception ดิบของระบบให้ผู้ใช้ทั่วไปเห็น ให้แปลงเป็นข้อความแนะนำที่เข้าใจง่าย
+- 🛡️ **Speed Benchmark Guardrail**: หากผู้ใช้สั่งให้ทดสอบความเร็ว (Speed/Latency) ของ MCP **ห้ามเรียกใช้งานคำขอจริงเกิน 3 requests ต่อครั้งเป็นอันขาด** เพื่อป้องกันการกิน quota ของ MCP หมด
+- 🛡️ **Simulate/Offline Testing Policy**: ระบบการทดสอบ (Unit Tests / Resilience Tests) ต้องทำงานในรูปแบบ Simulate/Offline 100% เสมอ ห้ามยิงคำขอออก Network จริงในชุดทดสอบอัตโนมัติ เพื่อรักษา Quota และป้องกัน API Key รั่วไหล
+

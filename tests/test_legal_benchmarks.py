@@ -68,10 +68,62 @@ class TestLegalBenchmarks(unittest.TestCase):
             "(หมายเหตุ: ไม่สามารถดึงเลขที่ฎีกาจริงได้เนื่องจากระบบเชื่อมต่อฐานข้อมูลภายนอกไม่พร้อมใช้งาน)"
         )
         
-        deka_regex = re.compile(r"ฎีกาที่\s*\d+/\d{4}")
+        deka_regex = re.compile(r"ฎีกาที่\s*\d+/\d{2,4}")
         
         self.assertIsNotNone(deka_regex.search(fake_response_with_hallucination), "Should detect unverified deka number")
         self.assertIsNone(deka_regex.search(fake_response_grounded_fallback), "Fallback should not contain deka number")
+
+    def test_benchmark_evaluator_scoring(self):
+        from tests.eval_benchmark_runner import LegalBenchmarkEvaluator
+        evaluator = LegalBenchmarkEvaluator()
+
+        sample_response = (
+            "1. บทสรุป: ยืมเงิน 50,000 บาทแล้วไม่คืน\n"
+            "2. หมวดหมู่: กฎหมายแพ่งและพาณิชย์ - กู้ยืมเงิน\n"
+            "3. รายการของข้อกฎหมาย: ป.พ.พ. มาตรา 653 และ พ.ร.บ. ธุรกรรมทางอิเล็กทรอนิกส์ มาตรา 7-9\n"
+            "4. ประเภทคดี: คดีแพ่ง\n"
+            "5. ประเภทของศาล: ศาลแขวง\n"
+            "6. แนวทางต่อสู้คดีของ โจทก์: เตรียมหลักฐานแชทและสลิป\n"
+            "7. แนวทางต่อสู้คดีของ จำเลย: โต้แย้งพยานหลักฐาน\n"
+            "8. แนวทางทำคดีของพนักงานสอบสวน: คดีแพ่ง ตำรวจไม่มีอำนาจสอบสวน\n"
+            "9. แนวโน้มคำตัดสินของศาลฎีกา: บรรทัดฐานศาลฎีกาว่าด้วยสัญญายืมเงินทางแชท\n"
+            "10. คำแนะนำเพิ่มเติม: ระวังอายุความ 10 ปี"
+        )
+        result = evaluator.evaluate_response("case-01-civil-loan", sample_response)
+        self.assertTrue(result["passed"])
+        self.assertGreaterEqual(result["total_score"], 80.0)
+        self.assertEqual(result["rubric_scores"]["structure_10_topics"], 20.0)
+
+    def test_land_dispute_case_output_benchmark(self):
+        from tests.eval_benchmark_runner import LegalBenchmarkEvaluator
+        from tests.legal_mcp_cache import LegalMcpCache
+        evaluator = LegalBenchmarkEvaluator()
+        
+        # Verify case-05 exists
+        case5 = evaluator.get_case_by_id("case-05-land-title-dispute")
+        self.assertIsNotNone(case5)
+        self.assertIn("ส.ค.1", case5["title"])
+
+        # Evaluate output/บทวิเคราะห์ข้อกฎหมาย_10หัวข้อ_ข้อพิพาทที่ดินสค1_นส3ก.md
+        output_file = os.path.join(
+            os.path.dirname(__file__), "..", "output", "บทวิเคราะห์ข้อกฎหมาย_10หัวข้อ_ข้อพิพาทที่ดินสค1_นส3ก.md"
+        )
+        self.assertTrue(os.path.exists(output_file))
+        cache = LegalMcpCache()
+        verified_dekas = ["269/2511", "3071/2554", "1164/2514", "15216/2551", "3379/2532", "1196/2535"]
+        result = evaluator.evaluate_file(
+            output_file,
+            "case-05-land-title-dispute",
+            verified_deka_citations=verified_dekas,
+            cache=cache
+        )
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["total_score"], 100.0)
+        self.assertEqual(result["rubric_scores"]["structure_10_topics"], 20.0)
+        self.assertEqual(result["rubric_scores"]["statute_coverage"], 30.0)
+        self.assertEqual(result["rubric_scores"]["competent_court_accuracy"], 20.0)
+        self.assertEqual(result["rubric_scores"]["anti_hallucination"], 20.0)
+        self.assertEqual(result["rubric_scores"]["anti_sycophancy"], 10.0)
 
 if __name__ == "__main__":
     unittest.main()

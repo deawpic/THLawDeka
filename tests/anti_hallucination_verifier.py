@@ -22,12 +22,21 @@ KNOWN_STATUTES = {
     "ป.อ.": "ประมวลกฎหมายอาญา",
     "ป.วิ.พ.": "ประมวลกฎหมายวิธีพิจารณาความแพ่ง",
     "ป.วิ.อ.": "ประมวลกฎหมายวิธีพิจารณาความอาญา",
+    "ป.ที่ดิน": "ประมวลกฎหมายที่ดิน",
+    "พระธรรมนูญศาลยุติธรรม": "พระธรรมนูญศาลยุติธรรม",
     "พ.ร.บ.คุ้มครองแรงงาน": "พระราชบัญญัติคุ้มครองแรงงาน พ.ศ. 2541",
     "พ.ร.บ.คอมพิวเตอร์": "พระราชบัญญัติว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์",
     "พ.ร.บ.ข้อสัญญาที่ไม่เป็นธรรม": "พระราชบัญญัติว่าด้วยข้อสัญญาที่ไม่เป็นธรรม พ.ศ. 2540",
     "พ.ร.บ.วิธีพิจารณาคดีผู้บริโภค": "พระราชบัญญัติวิธีพิจารณาคดีผู้บริโภค พ.ศ. 2551",
-    "พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์": "พระราชบัญญัติว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์"
+    "พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์": "พระราชบัญญัติว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์",
+    "พ.ร.บ.ล้มละลาย": "พระราชบัญญัติล้มละลาย พ.ศ. 2483",
+    "พ.ร.บ.จัดตั้งศาลปกครอง": "พระราชบัญญัติจัดตั้งศาลปกครองและวิธีพิจารณาคดีปกครอง พ.ศ. 2542",
 }
+
+STATUTE_CITATION_PATTERNS = [
+    re.compile(r"(?:ประมวลกฎหมาย(?:แพ่งและพาณิชย์|อาญา|วิธีพิจารณาความแพ่ง|วิธีพิจารณาความอาญา|ที่ดิน)|ป\.(?:พ\.พ\.|อ\.|วิ\.พ\.|วิ\.อ\.|ที่ดิน))", re.IGNORECASE),
+    re.compile(r"(?:พระราชบัญญัติ|พ\.ร\.บ\.)\s*[\u0E00-\u0E7F\w\s]+?(?=(?:พ\.ศ\.|มาตรา|ม\.|\s{2,}|$|\n|,|\())", re.IGNORECASE)
+]
 
 def extract_all_deka_numbers(text: str) -> List[str]:
     found = []
@@ -38,14 +47,34 @@ def extract_all_deka_numbers(text: str) -> List[str]:
                 found.append(m)
     return found
 
-def detect_unverified_deka_citations(text: str, verified_payloads: Optional[List[str]] = None) -> List[str]:
+def extract_all_statute_citations(text: str) -> List[str]:
+    """สกัดชื่อกฎหมายและตัวบทที่ถูกอ้างอิงในข้อความ"""
+    found = set()
+    for pattern in STATUTE_CITATION_PATTERNS:
+        for m in pattern.findall(text):
+            cleaned = m.strip()
+            if len(cleaned) >= 3 and not cleaned.endswith(("และ", "หรือ", "ตาม")):
+                found.add(cleaned)
+    return sorted(list(found))
+
+def detect_unverified_deka_citations(
+    text: str, 
+    verified_payloads: Optional[List[str]] = None,
+    cache: Optional[Any] = None
+) -> List[str]:
     verified_set = set(verified_payloads or [])
+    if cache is not None and hasattr(cache, "get_all_verified_dekas"):
+        verified_set.update(cache.get_all_verified_dekas())
     found_citations = extract_all_deka_numbers(text)
     unverified = [cite for cite in found_citations if cite not in verified_set]
     return unverified
 
-def sanitize_hallucinated_deka_numbers(text: str, verified_payloads: Optional[List[str]] = None) -> str:
-    unverified = detect_unverified_deka_citations(text, verified_payloads)
+def sanitize_hallucinated_deka_numbers(
+    text: str, 
+    verified_payloads: Optional[List[str]] = None,
+    cache: Optional[Any] = None
+) -> str:
+    unverified = detect_unverified_deka_citations(text, verified_payloads, cache=cache)
     if not unverified:
         return text
     
@@ -67,13 +96,14 @@ def detect_absolute_guarantees(text: str) -> List[str]:
 def audit_response_for_hallucinations(
     text: str, 
     verified_payloads: Optional[List[str]] = None,
-    allow_unverified_citations: bool = False
+    allow_unverified_citations: bool = False,
+    cache: Optional[Any] = None
 ) -> Dict[str, Any]:
     violations = []
     
-    # 1. Check Deka Grounding Gate
+    # 1. Check Deka Grounding Gate (Auto-Grounding from Cache if provided)
+    unverified_deka = detect_unverified_deka_citations(text, verified_payloads, cache=cache)
     if not allow_unverified_citations:
-        unverified_deka = detect_unverified_deka_citations(text, verified_payloads)
         if unverified_deka:
             violations.append({
                 "gate": "Deka Grounding Gate",
@@ -94,5 +124,6 @@ def audit_response_for_hallucinations(
         "passed": len(violations) == 0,
         "violations": violations,
         "detected_deka_numbers": extract_all_deka_numbers(text),
-        "unverified_deka_numbers": detect_unverified_deka_citations(text, verified_payloads)
+        "unverified_deka_numbers": unverified_deka,
+        "detected_statutes": extract_all_statute_citations(text)
     }

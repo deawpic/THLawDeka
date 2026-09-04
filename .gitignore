@@ -10,15 +10,20 @@
 *.key
 
 # ==========================================
-# 2. Python & Testing Artifacts (ไฟล์แคชจากการรันเทสต์)
+# 2. Python, Tooling & Testing Artifacts
 # ==========================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
 htmlcov/
+dist/
+build/
+*.egg-info/
 
 # ==========================================
 # 3. Virtual Environments (สภาพแวดล้อม Python)
@@ -30,24 +35,39 @@ env/
 slegaltools-legal-v2-mcp/
 
 # ==========================================
-# 4. Project Generated Outputs & Logs
+# 4. Project Cache, Databases & Local Storage
 # ==========================================
-output/
 cache/
 *.db
 *.db-wal
 *.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite*-wal
+*.sqlite*-shm
+*.corrupted.*
 *.log
 scratch/
 tmp/
+temp/
 
 # ==========================================
-# 5. OS & Editor Specific Files
+# 5. Project Deliverables & Output Artifacts
+# ==========================================
+# ละเว้นไฟล์ binary/dump ใน output/ แต่เปิดให้ติดตามรายงานบทวิเคราะห์และสเปก (.md)
+output/*
+!output/*.md
+!output/**/
+
+# ==========================================
+# 6. OS & Editor Specific Files
 # ==========================================
 .DS_Store
 Thumbs.db
+.directory
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+*.bak
