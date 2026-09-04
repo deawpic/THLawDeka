@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tests.anti_hallucination_verifier import audit_response_for_hallucinations
+from harness.verifier import audit_response_for_hallucinations
 
 REQUIRED_10_TOPIC_HEADERS = [
     r"1\.\s*บทสรุป",
@@ -245,7 +245,7 @@ def seed_case_research_cache(cache: LegalMcpCache) -> int:
 def main():
     import argparse
     import sys
-    from tests.legal_mcp_cache import LegalMcpCache
+    from harness.cache import LegalMcpCache
 
     parser = argparse.ArgumentParser(description="Legal Benchmark Evaluation & Output Audit CLI")
     parser.add_argument("--file", type=str, default=None, help="Path to markdown file to evaluate")

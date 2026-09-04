@@ -5,7 +5,7 @@ import tempfile
 import time
 import unittest
 from typing import Optional, Any
-from tests.legal_mcp_cache import LegalMcpCache
+from harness.cache import LegalMcpCache
 
 MCP_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", ".agents", "mcp_config.json")
 

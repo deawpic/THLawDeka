@@ -108,8 +108,13 @@ class LegalMcpCache:
         max_memory_items: int = 512,
         max_size_mb: int = 100
     ):
-        resolved_path = db_path or os.getenv("LEGAL_CACHE_DB_PATH", "cache/mcp_cache.db")
-        self.db_path = Path(resolved_path).resolve()
+        if db_path:
+            resolved_path = Path(db_path)
+        elif os.getenv("LEGAL_CACHE_DB_PATH"):
+            resolved_path = Path(os.getenv("LEGAL_CACHE_DB_PATH"))
+        else:
+            resolved_path = Path(__file__).resolve().parent.parent / "cache" / "mcp_cache.db"
+        self.db_path = resolved_path.resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self.max_memory_items = max_memory_items

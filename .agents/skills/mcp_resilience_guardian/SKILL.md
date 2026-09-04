@@ -28,7 +28,7 @@ tags: [mcp, resilience, retry, rate-limit, fallback, error-handling, thai-legal]
 ## 3. ขั้นตอนการทำงาน (Operational Flow)
 
 ### ขั้นตอนที่ 0: ตรวจสอบแคชข้อมูลกฎหมาย (Tier-0 Legal Cache Interceptor)
-1. **ตรวจสอบ L1 In-Memory LRU Cache (<0.2ms)** และ **L2 SQLite Compressed Disk Cache (<2.0ms)** ผ่านโมดูล `tests/legal_mcp_cache.py`:
+1. **ตรวจสอบ L1 In-Memory LRU Cache (<0.2ms)** และ **L2 SQLite Compressed Disk Cache (<2.0ms)** ผ่านโมดูล `harness/cache.py`:
    - มีการทำ **Legal Query Normalization** แปลงตัวย่อ (`ป.พ.พ.`, `ป.อ.`, `ป.วิ.พ.`, `ป.วิ.อ.`, `ป.ที่ดิน`, `พ.ร.บ.`, `ม.xxx`) และจัดเรียง Token เพื่อให้การค้นหาคำสำคัญสลับตำแหน่งได้ผลลัพธ์จากแคชเดียวกัน 100%
 2. **หากพบข้อมูลในแคช (Cache Hit)**:
    - คืนค่าผลการค้นหากฎหมายที่ผ่านการกลั่นกรอง (Distilled Payload) ทันทีโดย **ไม่ต้องส่ง Request ออกไปยัง MCP ภายนอก**

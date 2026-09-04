@@ -2,7 +2,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from tests.anti_hallucination_verifier import (
+from harness.verifier import (
     extract_all_deka_numbers,
     extract_all_statute_citations,
     detect_unverified_deka_citations,
@@ -10,7 +10,7 @@ from tests.anti_hallucination_verifier import (
     detect_absolute_guarantees,
     audit_response_for_hallucinations
 )
-from tests.legal_mcp_cache import LegalMcpCache
+from harness.cache import LegalMcpCache
 
 class TestAntiHallucination(unittest.TestCase):
 

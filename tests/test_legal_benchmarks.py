@@ -3,8 +3,9 @@ import re
 import os
 import unittest
 
-BENCHMARK_PATH = os.path.join(os.path.dirname(__file__), "benchmark_cases.json")
+BENCHMARK_PATH = os.path.join(os.path.dirname(__file__), "..", "harness", "benchmark_cases.json")
 AGENTS_MD_PATH = os.path.join(os.path.dirname(__file__), "..", ".agents", "AGENTS.md")
+ROOT_AGENTS_MD_PATH = os.path.join(os.path.dirname(__file__), "..", "AGENTS.md")
 LEGAL_ADVISOR_PATH = os.path.join(os.path.dirname(__file__), "..", ".agents", "skills", "legal_advisor", "SKILL.md")
 
 EXPECTED_10_TOPICS = [
@@ -21,6 +22,13 @@ EXPECTED_10_TOPICS = [
 ]
 
 class TestLegalBenchmarks(unittest.TestCase):
+
+    def test_root_agents_md_mirror_sync(self):
+        """ตรวจสอบว่า AGENTS.md ที่ Root และ .agents/AGENTS.md มีอยู่จริงและมีเนื้อหาตรงกัน 100%"""
+        self.assertTrue(os.path.exists(ROOT_AGENTS_MD_PATH), "Root AGENTS.md must exist")
+        self.assertTrue(os.path.exists(AGENTS_MD_PATH), ".agents/AGENTS.md must exist")
+        with open(ROOT_AGENTS_MD_PATH, "r", encoding="utf-8") as f1, open(AGENTS_MD_PATH, "r", encoding="utf-8") as f2:
+            self.assertEqual(f1.read(), f2.read(), "Root AGENTS.md and .agents/AGENTS.md must be identical")
 
     def test_benchmark_cases_structure(self):
         self.assertTrue(os.path.exists(BENCHMARK_PATH), "benchmark_cases.json must exist")
@@ -74,7 +82,7 @@ class TestLegalBenchmarks(unittest.TestCase):
         self.assertIsNone(deka_regex.search(fake_response_grounded_fallback), "Fallback should not contain deka number")
 
     def test_benchmark_evaluator_scoring(self):
-        from tests.eval_benchmark_runner import LegalBenchmarkEvaluator
+        from harness.evaluator import LegalBenchmarkEvaluator
         evaluator = LegalBenchmarkEvaluator()
 
         sample_response = (
@@ -95,8 +103,8 @@ class TestLegalBenchmarks(unittest.TestCase):
         self.assertEqual(result["rubric_scores"]["structure_10_topics"], 20.0)
 
     def test_land_dispute_case_output_benchmark(self):
-        from tests.eval_benchmark_runner import LegalBenchmarkEvaluator
-        from tests.legal_mcp_cache import LegalMcpCache
+        from harness.evaluator import LegalBenchmarkEvaluator
+        from harness.cache import LegalMcpCache
         evaluator = LegalBenchmarkEvaluator()
         
         # Verify case-05 exists

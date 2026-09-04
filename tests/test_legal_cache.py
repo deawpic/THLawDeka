@@ -6,7 +6,7 @@ import time
 import unittest
 from pathlib import Path
 
-from tests.legal_mcp_cache import LegalMcpCache, LegalPayloadDistiller
+from harness.cache import LegalMcpCache, LegalPayloadDistiller
 
 class TestLegalPayloadDistiller(unittest.TestCase):
 
