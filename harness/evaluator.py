@@ -123,7 +123,8 @@ class LegalBenchmarkEvaluator:
             "rubric_scores": rubric_scores,
             "findings": findings,
             "detected_deka_numbers": audit_res.get("detected_deka_numbers", []),
-            "unverified_deka_numbers": audit_res.get("unverified_deka_numbers", [])
+            "unverified_deka_numbers": audit_res.get("unverified_deka_numbers", []),
+            "mermaid_audit": audit_res.get("mermaid_audit", {})
         }
 
     def evaluate_file(

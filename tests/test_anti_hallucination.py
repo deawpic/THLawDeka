@@ -8,7 +8,8 @@ from harness.verifier import (
     detect_unverified_deka_citations,
     sanitize_hallucinated_deka_numbers,
     detect_absolute_guarantees,
-    audit_response_for_hallucinations
+    audit_response_for_hallucinations,
+    validate_mermaid_syntax
 )
 from harness.cache import LegalMcpCache
 
@@ -91,5 +92,57 @@ class TestAntiHallucination(unittest.TestCase):
         self.assertFalse(audit["passed"])
         self.assertEqual(len(audit["violations"]), 2) # Deka Grounding Gate + Judicial Discretion Gate
 
+    def test_mermaid_class_diagram_with_thai_fails(self):
+        bad_mermaid = (
+            "```mermaid\n"
+            "classDiagram\n"
+            "    class นาย_ส_พนักงานอัยการ {\n"
+            "        +สถานะ: สามี\n"
+            "    }\n"
+            "```"
+        )
+        res = validate_mermaid_syntax(bad_mermaid)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+        self.assertIn("Lexical Error", res["issues"][0]["error"])
+
+        audit = audit_response_for_hallucinations(bad_mermaid)
+        self.assertFalse(audit["passed"])
+        self.assertTrue(any(v["gate"] == "Mermaid Diagram Gate" for v in audit["violations"]))
+
+    def test_mermaid_flowchart_unquoted_thai_label_fails(self):
+        bad_mermaid = (
+            "```mermaid\n"
+            "flowchart TD\n"
+            "    PersonS[นาย ส (พนักงานอัยการ)] --> PersonD[นาย ด]\n"
+            "```"
+        )
+        res = validate_mermaid_syntax(bad_mermaid)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+
+    def test_mermaid_flowchart_quoted_thai_passes(self):
+        good_mermaid = (
+            "```mermaid\n"
+            "flowchart TD\n"
+            '    PersonS["<b>นาย ส (พนักงานอัยการ)</b><br/>สถานะ: สามี"] --> PersonD["<b>นาย ด</b>"]\n'
+            "```"
+        )
+        res = validate_mermaid_syntax(good_mermaid)
+        self.assertTrue(res["passed"])
+        self.assertEqual(len(res["issues"]), 0)
+
+        audit = audit_response_for_hallucinations(good_mermaid)
+        self.assertTrue(audit["passed"])
+
+    def test_saved_report_passes_mermaid_validation(self):
+        report_path = "/home/deaw/Projects/thlawdeka/output/บทวิเคราะห์ข้อกฎหมาย_กรณีสมรสซ้อน_สถานะบุตร_นายด.md"
+        if os.path.exists(report_path):
+            with open(report_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            res = validate_mermaid_syntax(content)
+            self.assertTrue(res["passed"], f"Saved report has mermaid issues: {res['issues']}")
+
 if __name__ == "__main__":
     unittest.main()
+

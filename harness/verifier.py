@@ -93,6 +93,71 @@ def detect_absolute_guarantees(text: str) -> List[str]:
             violations.append(match.group(0))
     return violations
 
+def validate_mermaid_syntax(text: str) -> Dict[str, Any]:
+    """
+    ตรวจสอบความถูกต้องของบล็อก Mermaid เพื่อป้องกัน Lexical Error จากภาษาไทยและอักขระพิเศษ
+    ตามข้อกำหนด Mermaid Unicode & Diagram Guardrail ใน AGENTS.md
+    """
+    mermaid_blocks = re.findall(r"```mermaid\s*([\s\S]*?)```", text)
+    issues = []
+    
+    for idx, block in enumerate(mermaid_blocks, 1):
+        lines = block.strip().split("\n")
+        if not lines:
+            continue
+        first_line = lines[0].strip().split()[0] if lines[0].strip() else ""
+        
+        # 1. ตรวจจับ classDiagram, stateDiagram, erDiagram ที่มีภาษาไทย
+        if any(dt in lines[0] for dt in ["classDiagram", "stateDiagram", "erDiagram"]):
+            has_thai = bool(re.search(r"[\u0E00-\u0E7F]", block))
+            if has_thai:
+                for line_no, line in enumerate(lines, 1):
+                    if re.search(r"[\u0E00-\u0E7F]", line):
+                        issues.append({
+                            "block": idx,
+                            "line": line_no,
+                            "diagram_type": first_line,
+                            "error": f"ห้ามใช้ภาษาไทยใน {first_line} โดยตรง (ทำให้เกิด Lexical Error)",
+                            "content": line.strip(),
+                            "fix": "เปลี่ยนไปใช้ 'flowchart TD' หรือ 'graph TD' พร้อมครอบข้อความด้วย double quotes [\"...\"]"
+                        })
+                        
+        # 2. ตรวจจับ Node ใน flowchart / graph ที่มีภาษาไทยหรือวงเล็บ แต่ลืมครอบ double quotes ["..."]
+        if any(dt in lines[0] for dt in ["flowchart", "graph"]):
+            for line_no, line in enumerate(lines, 1):
+                clean_line = line.strip()
+                if not clean_line or clean_line.startswith("%%"):
+                    continue
+                # ตรวจจับ Node label เช่น id[...] ที่ข้างในมีภาษาไทยหรือวงเล็บ แต่ไม่ได้ครอบด้วย "
+                unquoted_bracket = re.search(r'\b[A-Za-z0-9_]+\s*\[\s*([^"\[\]]*?[\u0E00-\u0E7F()]+[^"\[\]]*?)\s*\]', clean_line)
+                if unquoted_bracket:
+                    issues.append({
+                        "block": idx,
+                        "line": line_no,
+                        "diagram_type": "flowchart",
+                        "error": "Unquoted label with Thai or special characters",
+                        "content": clean_line,
+                        "fix": 'ครอบข้อความด้วย double quotes เช่น ID["..."]'
+                    })
+                
+                # ตรวจจับ Node label เช่น id(...) ที่ข้างในมีภาษาไทย แต่ไม่ได้ครอบด้วย "
+                unquoted_paren = re.search(r'\b[A-Za-z0-9_]+\s*\(\s*([^"()]*?[\u0E00-\u0E7F]+[^"()]*?)\s*\)', clean_line)
+                if unquoted_paren:
+                    issues.append({
+                        "block": idx,
+                        "line": line_no,
+                        "diagram_type": "flowchart",
+                        "error": "Unquoted label with Thai or special characters in parenthesis node",
+                        "content": clean_line,
+                        "fix": 'ครอบข้อความด้วย double quotes เช่น ID("...")'
+                    })
+                    
+    return {
+        "passed": len(issues) == 0,
+        "total_diagrams": len(mermaid_blocks),
+        "issues": issues
+    }
+
 def audit_response_for_hallucinations(
     text: str, 
     verified_payloads: Optional[List[str]] = None,
@@ -120,10 +185,22 @@ def audit_response_for_hallucinations(
             "message": f"Found absolute outcome guarantees: {guarantee_violations}"
         })
         
+    # 3. Check Mermaid Diagram Gate
+    mermaid_audit = validate_mermaid_syntax(text)
+    if not mermaid_audit["passed"]:
+        for issue in mermaid_audit["issues"]:
+            violations.append({
+                "gate": "Mermaid Diagram Gate",
+                "severity": "MEDIUM",
+                "message": f"[Block {issue['block']} Line {issue['line']}] {issue['error']}: {issue['content']} -> Fix: {issue['fix']}"
+            })
+            
     return {
         "passed": len(violations) == 0,
         "violations": violations,
         "detected_deka_numbers": extract_all_deka_numbers(text),
         "unverified_deka_numbers": unverified_deka,
-        "detected_statutes": extract_all_statute_citations(text)
+        "detected_statutes": extract_all_statute_citations(text),
+        "mermaid_audit": mermaid_audit
     }
+
