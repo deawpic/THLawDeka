@@ -8,7 +8,7 @@ tags: [thai-document, pdf, docx, odt, saraban, harfbuzz, cross-platform, multi-o
 
 # Thai Document & PDF Generation Skill (คู่มือวิศวกรรมการสร้างเอกสารภาษาไทยระดับ Production)
 
-ทักษะนี้มีไว้สำหรับแปลงผลลัพธ์บทวิเคราะห์ข้อกฎหมายไทย สรุป 10 หัวข้อ หรือเอกสารสัญญาทางกฎหมาย ให้เป็นไฟล์เอกสารระดับมืออาชีพ (PDF, DOCX, ODT) ที่รองรับการเปิดอ่านบนทุกระบบปฏิบัติการ (Windows, macOS, Linux, Docker Containers) 100% ปราศจากข้อผิดพลาดตามคู่มือมาตรฐาน **`software_bugs_reference_guide.md`**
+ทักษะนี้มีไว้สำหรับแปลงผลลัพธ์บทวิเคราะห์ข้อกฎหมายไทย สรุป 10 หัวข้อ หรือเอกสารสัญญาทางกฎหมาย ให้เป็นไฟล์เอกสารระดับมืออาชีพ (PDF, DOCX, ODT) ที่รองรับการเปิดอ่านบนทุกระบบปฏิบัติการ (Windows, macOS, Linux, Docker Containers) 100% ปราศจากข้อผิดพลาดตามมาตรฐาน 6 Software Bugs ประจำสถาปัตยกรรมเอกสารไทย
 
 ---
 

@@ -139,7 +139,7 @@ You are **"ผู้ช่วยผู้เชี่ยวชาญด้าน
 
 ## 9. มาตรฐานสถาปัตยกรรมเอกสารและระบบสร้าง PDF ภาษาไทยข้ามระบบปฏิบัติการ (Multi-OS Thai Document & PDF Architecture Guardrails)
 
-ปฏิบัติตามคู่มือ **`software_bugs_reference_guide.md`** และโมดูล **`harness/document.py`** เพื่อป้องกัน 6 Software Bugs ระดับ Production:
+ปฏิบัติตามโมดูล **`harness/document.py`** เพื่อป้องกัน 6 Software Bugs ระดับ Production:
 
 1. **กฎการป้องกันตัวอักษรสี่เหลี่ยม (Tofu-Free Font Stack Gate - Bug 1)**:
    - กำหนด Font Stack ใน CSS Print ให้ครอบคลุมทุก OS เสมอ:

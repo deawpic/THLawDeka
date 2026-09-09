@@ -133,5 +133,67 @@ class TestLegalBenchmarks(unittest.TestCase):
         self.assertEqual(result["rubric_scores"]["anti_hallucination"], 20.0)
         self.assertEqual(result["rubric_scores"]["anti_sycophancy"], 10.0)
 
+    def test_benchmark_cases_includes_case6_and_case7(self):
+        """ตรวจสอบว่าชุดทดสอบครอบคลุม Case 6 (สมรสซ้อน/สถานะบุตร) และ Case 7 (พรากผู้เยาว์ ม.319)"""
+        from harness.evaluator import LegalBenchmarkEvaluator
+        evaluator = LegalBenchmarkEvaluator()
+
+        # Case 6: Family / Bigamy / Legitimate Child
+        case6 = evaluator.get_case_by_id("case-06-family-bigamy-child-status")
+        self.assertIsNotNone(case6, "case-06 must exist in benchmark suite")
+        self.assertIn("กฎหมายครอบครัวและมรดก", case6["ground_truth"]["category"])
+        c6_sections = [str(s["section"]) for s in case6["ground_truth"]["statutes"]]
+        self.assertTrue(any("1452" in s for s in c6_sections))
+        self.assertTrue(any("1536" in s for s in c6_sections))
+        self.assertIn("ศาลเยาวชนและครอบครัว", case6["ground_truth"]["competent_court"])
+
+        # Case 7: Statutory Rape of Minor / CCC 319
+        case7 = evaluator.get_case_by_id("case-07-statutory-rape-minor")
+        self.assertIsNotNone(case7, "case-07 must exist in benchmark suite")
+        self.assertIn("กฎหมายอาญา", case7["ground_truth"]["category"])
+        c7_sections = [str(s["section"]) for s in case7["ground_truth"]["statutes"]]
+        self.assertTrue(any("319" in s for s in c7_sections))
+        self.assertIn("ศาลอาญา", case7["ground_truth"]["competent_court"])
+
+    def test_classify_artifact_categories(self):
+        """ตรวจสอบการจำแนกประเภทไฟล์ Artifact ทั้ง 5 ประเภทอย่างแม่นยำ"""
+        from harness.evaluator import classify_artifact, ArtifactType
+
+        t1, c1 = classify_artifact("บทวิเคราะห์ข้อกฎหมาย_10หัวข้อ_ข้อพิพาทที่ดินสค1_นส3ก.md")
+        self.assertEqual(t1, ArtifactType.FULL_10_TOPICS)
+        self.assertEqual(c1, "case-05-land-title-dispute")
+
+        t2, c2 = classify_artifact("บทวิเคราะห์ข้อกฎหมาย_กรณีสมรสซ้อน_สถานะบุตร_นายด.md")
+        self.assertEqual(t2, ArtifactType.COMPREHENSIVE_ANALYSIS)
+        self.assertEqual(c2, "case-06-family-bigamy-child-status")
+
+        t3, c3 = classify_artifact("fourcorners_เทียบฎีกา_ข้อพิพาทที่ดินสค1_นส3ก.md")
+        self.assertEqual(t3, ArtifactType.DEKA_RESEARCH)
+        self.assertEqual(c3, "case-05-land-title-dispute")
+
+        t4, c4 = classify_artifact("land_sale_contract_case_analysis.md")
+        self.assertEqual(t4, ArtifactType.CONTRACT_OPINION)
+        self.assertEqual(c4, "case-05-land-title-dispute")
+
+        t5, c5 = classify_artifact("legal_mcp_cache_spec_and_features.md")
+        self.assertEqual(t5, ArtifactType.SYSTEM_DOC)
+        self.assertIsNone(c5)
+
+    def test_audit_output_directory_all_pass(self):
+        """ตรวจสอบว่าไฟล์ทั้งหมดในโฟลเดอร์ output/ ผ่านเกณฑ์การตรวจตาม Rubric ของตนเอง 100%"""
+        from harness.evaluator import LegalBenchmarkEvaluator
+        from harness.cache import LegalMcpCache
+        evaluator = LegalBenchmarkEvaluator()
+        cache = LegalMcpCache()
+
+        results = evaluator.audit_output_directory(cache=cache)
+        self.assertGreaterEqual(len(results), 10, "output/ directory must contain at least 10 markdown files")
+        for r in results:
+            self.assertTrue(
+                r.get("passed", False),
+                f"File {r.get('file_evaluated')} failed evaluation: findings={r.get('findings')}, error={r.get('error')}"
+            )
+            self.assertGreaterEqual(r.get("total_score", 0.0), 80.0)
+
 if __name__ == "__main__":
     unittest.main()

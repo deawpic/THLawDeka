@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Unit & Integration Tests for Thai Document & PDF Generator
-Validates compliance with Software Bugs Reference Guide:
+Validates compliance with Multi-OS Production Standards:
 - Bug 1: Tofu Box Prevention & Universal Font Stack
 - Bug 2: HarfBuzz Tone Marks & Docker Shm Safety Flags
 - Bug 3: Safe Subprocess Multi-line Execution
@@ -20,13 +20,19 @@ from harness.document import (
     find_system_chromium_binary,
     get_thai_saraban_css,
     markdown_to_thai_html,
+    convert_markdown_to_thai_html,
     convert_html_to_thai_pdf,
     convert_markdown_to_thai_pdf,
+    convert_markdown_to_docx,
+    convert_markdown_to_odt,
+    export_all_formats,
     safe_run_python_script,
     validate_docx_alignment,
     build_odt_thai_style_properties,
     check_system_environment,
     UNIVERSAL_THAI_FONT_STACK,
+    DOCX_AVAILABLE,
+    ODF_AVAILABLE,
 )
 
 class TestThaiDocumentGenerator(unittest.TestCase):
@@ -128,5 +134,113 @@ class TestThaiDocumentGenerator(unittest.TestCase):
         self.assertTrue(os.path.exists(res_path))
         self.assertGreater(os.path.getsize(res_path), 1000)
 
+    def test_markdown_to_thai_html_tables_and_links(self):
+        """ทดสอบการแปลง Table, ลิงก์ และ Ordered List ใน Markdown to HTML"""
+        sample_md = (
+            "# รายงานกฎหมาย\n\n"
+            "## สารบัญ\n"
+            "1. [บทสรุป](#summary)\n"
+            "2. [ข้อกฎหมาย](#statutes)\n\n"
+            "| ลำดับ | ประเด็น | ผลทางกฎหมาย |\n"
+            "| :---: | :--- | :---: |\n"
+            "| 1 | การสมรส | โมฆะ |\n"
+        )
+        html_out = markdown_to_thai_html(sample_md, title="รายงาน")
+        self.assertIn("<ol>", html_out)
+        self.assertIn("<a href=\"#summary\">บทสรุป</a>", html_out)
+        self.assertIn("<div class='table-container'><table>", html_out)
+        self.assertIn("<th style='text-align: center;'>ลำดับ</th>", html_out)
+        self.assertIn("<td style='text-align: center;'>1</td>", html_out)
+        self.assertIn("<td style='text-align: left;'>การสมรส</td>", html_out)
+
+    def test_convert_markdown_saves_companion_html(self):
+        """ทดสอบว่า convert_markdown_to_thai_pdf สร้างไฟล์ companion .html คู่กันอย่างถูกต้อง"""
+        env = check_system_environment()
+        if not env["chromium_available"]:
+            self.skipTest("Chromium not installed in test environment")
+
+        md_file = os.path.join(self.temp_dir, "test_doc.md")
+        pdf_file = os.path.join(self.temp_dir, "test_doc.pdf")
+        html_file = os.path.join(self.temp_dir, "test_doc.html")
+
+        Path(md_file).write_text("# หัวข้อทดสอบ\n\nข้อความเนื้อหา", encoding="utf-8")
+        convert_markdown_to_thai_pdf(md_file, pdf_file, save_html=True)
+
+        self.assertTrue(os.path.exists(pdf_file), "PDF file must exist")
+        self.assertTrue(os.path.exists(html_file), "Companion HTML file must exist")
+        self.assertIn("หัวข้อทดสอบ", Path(html_file).read_text(encoding="utf-8"))
+
+    def test_convert_markdown_to_docx(self):
+        """ทดสอบการสร้างไฟล์ Word (.docx) ตามมาตรฐานสารบรรณ 16pt และบล็อก thaiDistribute"""
+        if not DOCX_AVAILABLE:
+            self.skipTest("python-docx is not installed in test environment")
+
+        md_content = (
+            "# รายงานผลการวิเคราะห์กฎหมาย\n\n"
+            "## 1. ข้อเท็จจริง\n"
+            "ทดสอบข้อความภาษาไทย **ตัวหนา** และ *ตัวเอียง* รวมทั้ง [คำพิพากษาศาลฎีกาที่ 15216/2551]\n\n"
+            "| ลำดับ | รายการ | ผลลัพธ์ |\n"
+            "| :---: | :--- | :---: |\n"
+            "| 1 | การตรวจสอบ | สมบูรณ์ |\n\n"
+            "- รายการย่อยที่หนึ่ง\n"
+            "- รายการย่อยที่สอง\n"
+        )
+        docx_file = os.path.join(self.temp_dir, "test_output.docx")
+        out_path = convert_markdown_to_docx(md_content, docx_file, doc_title="รายงานผลการวิเคราะห์กฎหมาย")
+
+        self.assertTrue(os.path.exists(out_path), "DOCX file must exist")
+        self.assertGreater(os.path.getsize(out_path), 1000, "DOCX file size must be > 1000 bytes")
+
+        # Verify paragraph alignment does not use thaiDistribute (Bug 5)
+        import docx
+        doc = docx.Document(str(out_path))
+        for p in doc.paragraphs:
+            # alignment should be LEFT or None (default left), never DISTRIBUTE
+            self.assertNotEqual(p.alignment, docx.enum.text.WD_ALIGN_PARAGRAPH.DISTRIBUTE)
+
+    def test_convert_markdown_to_odt(self):
+        """ทดสอบการสร้างไฟล์ OpenDocument (.odt) พร้อมคุณสมบัติ CTL"""
+        if not ODF_AVAILABLE:
+            self.skipTest("odfpy is not installed in test environment")
+
+        md_content = (
+            "# รายงานผลการวิเคราะห์กฎหมาย OpenDocument\n\n"
+            "## 1. สรุปประเด็น\n"
+            "การทดสอบการส่งออก ODT ตามระเบียบงานสารบรรณ\n\n"
+            "| หัวข้อ | รายละเอียด |\n"
+            "| :--- | :--- |\n"
+            "| ข้อ 1 | ข้อเท็จจริง |\n"
+        )
+        odt_file = os.path.join(self.temp_dir, "test_output.odt")
+        out_path = convert_markdown_to_odt(md_content, odt_file, doc_title="รายงาน ODT")
+
+        self.assertTrue(os.path.exists(out_path), "ODT file must exist")
+        self.assertGreater(os.path.getsize(out_path), 1000, "ODT file size must be > 1000 bytes")
+
+    def test_export_all_formats(self):
+        """ทดสอบการส่งออกครบทุกฟอร์แมตในคำสั่งเดียว (HTML, PDF, DOCX, ODT)"""
+        md_file = os.path.join(self.temp_dir, "multi_export.md")
+        base_output = os.path.join(self.temp_dir, "multi_export")
+        Path(md_file).write_text("# รายงานครบฟอร์แมต\n\nทดสอบเนื้อหา", encoding="utf-8")
+
+        results = export_all_formats(md_file, base_output, doc_title="รายงานครบฟอร์แมต")
+
+        self.assertIn("html", results)
+        self.assertTrue(os.path.exists(results["html"]))
+
+        if DOCX_AVAILABLE:
+            self.assertIn("docx", results)
+            self.assertTrue(os.path.exists(results["docx"]))
+
+        if ODF_AVAILABLE:
+            self.assertIn("odt", results)
+            self.assertTrue(os.path.exists(results["odt"]))
+
+        env = check_system_environment()
+        if env["chromium_available"]:
+            self.assertIn("pdf", results)
+            self.assertTrue(os.path.exists(results["pdf"]))
+
 if __name__ == "__main__":
     unittest.main()
+
