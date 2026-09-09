@@ -17,18 +17,6 @@ from harness.verifier import (
 )
 from harness.evaluator import LegalBenchmarkEvaluator
 
-from harness.document import (
-    find_system_chromium_binary,
-    convert_html_to_thai_pdf,
-    convert_markdown_to_thai_pdf,
-    safe_run_python_script,
-    validate_docx_alignment,
-    build_odt_thai_style_properties,
-    check_system_environment,
-    get_thai_saraban_css,
-    markdown_to_thai_html,
-)
-
 __all__ = [
     "LegalMcpCache",
     "LegalPayloadDistiller",
@@ -41,13 +29,4 @@ __all__ = [
     "sanitize_hallucinated_deka_numbers",
     "detect_absolute_guarantees",
     "LegalBenchmarkEvaluator",
-    "find_system_chromium_binary",
-    "convert_html_to_thai_pdf",
-    "convert_markdown_to_thai_pdf",
-    "safe_run_python_script",
-    "validate_docx_alignment",
-    "build_odt_thai_style_properties",
-    "check_system_environment",
-    "get_thai_saraban_css",
-    "markdown_to_thai_html",
 ]

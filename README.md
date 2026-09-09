@@ -7,7 +7,7 @@
 3. ระบบรักษาเสถียรภาพ MCP 
 4. ระบบตรวจสอบคำอ้างอิงและเลขฎีกา กันอาการหลอนของเอไอ
 5. ชุดทดสอบทางกฎหมายอัตโนมัติ (Benchmark Testbed & Cache Performance Suite)
-6. ระบบสร้างและส่งออกเอกสารภาษาไทยข้ามแพลตฟอร์ม (Multi-OS Thai Document & PDF Generator) ปราศจากสระลอยและ Tofu Box
+6. การส่งออกผลลัพธ์เป็นไฟล์ **Markdown (`.md`) UTF-8** มาตรฐาน Single Source of Truth
 
 ---
 
@@ -41,7 +41,6 @@ thlawdeka/
 │       ├── legal_fact_elicitation/# [New] ระบบสกัดและซักถามข้อเท็จจริงสำคัญ (อายุความ/สัญญา) ก่อนวิเคราะห์
 │       ├── deka_citation_verifier/# [New] ระบบตรวจสอบความถูกต้องของเลขฎีกาและตัวบท ป้องกันข้อมูลหลอน
 │       ├── mcp_resilience_guardian/# [New] ระบบ Tier-0 Caching, 429 Rate Limit, Backoff และ Fallback
-│       ├── thai_document_generator/# [New] ระบบสร้างเอกสารภาษาไทย (PDF/Word/ODT) มาตรฐานสารบรรณ Multi-OS
 │       ├── api_key_setup/         # ความสามารถตั้งค่า API Key แบบ Interactive
 │       ├── fc_mcp/                # ความสามารถตั้งค่า MCP setting ของ fourcorners-tlex
 │       ├── sl_mcp/                # ความสามารถตั้งค่า MCP setting ของ slegaltools
@@ -49,20 +48,21 @@ thlawdeka/
 ├── harness/                       # 🛡️ [Harness Core & Evaluation Engine]
 │   ├── __init__.py                # Package export สำหรับโมดูลหลัก
 │   ├── cache.py                   # ตัวจัดการแคช L1/L2, zlib compression, query normalization, FinOps CLI
-│   ├── document.py                # ระบบแปลง Markdown/HTML เป็น PDF และส่งออกเอกสารไทยตามมาตรฐานสารบรรณ
 │   ├── verifier.py                # ตัวตรวจสอบและกรองเลขฎีกา/ตัวบทหลอนอัตโนมัติ (Anti-Hallucination)
 │   ├── evaluator.py               # ระบบประเมินผลคำปรึกษาและ Output Auditor
-│   └── benchmark_cases.json       # ชุดคดีทดสอบมาตรฐาน (แพ่ง, อาญา, แรงงาน, ผู้บริโภค, ที่ดิน ส.ค.1)
+│   ├── mock_llm.py                # ระบบจำลอง Synthetic Legal LLM และ Adversarial Testbed
+│   └── benchmark_cases.json       # ชุดคดีทดสอบมาตรฐาน (แพ่ง, อาญา, แรงงาน, ที่ดิน, ปกครอง, PDPA, IP&IT)
 ├── tests/                         # 🧪 [Pure Test Suites เท่านั้น]
 │   ├── __init__.py
 │   ├── test_legal_cache.py        # Unit tests ทดสอบแคช, zlib, Tiered TTL, 100MB budget, Concurrency
 │   ├── test_legal_benchmarks.py   # Unit tests ตรวจสอบความถูกต้องของโครงสร้างกฎหมายและ Mirror Sync
 │   ├── test_anti_hallucination.py # Unit tests ทดสอบ Auto-Grounding Oracle และตัวบทกฎหมาย
 │   ├── test_mcp_resilience.py     # Unit tests ทดสอบ Fault Injection, Caching Interceptor, Backoff และ Config
-│   └── test_thai_document_generator.py # Unit tests ทดสอบฟอนต์, สารบรรณ CSS, DOCX และ ODT CTL
+│   └── test_mock_llm.py           # Unit tests ทดสอบ Mock LLM Pipeline และ Adversarial Detection
 ├── scripts/                       # 🚀 [DevOps & Automation Scripts]
+│   ├── ping_mcp.py                # เครื่องมือ Active Ping ตรวจสอบสุขภาพ MCP Servers แบบเรียลไทม์
 │   └── run_harness.sh             # สคริปต์รันการทดสอบและ Audit คุณภาพทั้งระบบ (Unified Pipeline)
-├── output/                        # โฟลเดอร์สำหรับบันทึกผลลัพธ์ UTF-8 และสเปก v3.3
+├── output/                        # โฟลเดอร์สำหรับบันทึกผลลัพธ์ Markdown UTF-8
 └── .env                           # เก็บข้อมูล API Keys (DEKA_API_KEY, FC_API_KEY, TL_API_KEY)
 ```
 
@@ -140,10 +140,10 @@ thlawdeka/
 <a id="6--การรันชุดทดสอบ-evaluation-benchmark--cicd-testbed"></a>
 ## 🧪 6. การรันชุดทดสอบ Evaluation, Benchmark & CI/CD Testbed
 
-ท่านสามารถรันการทดสอบ Unit Tests (68 Tests), ตรวจสอบสุขภาพแคช และประเมินคุณภาพเอกสารกฎหมายได้ผ่านสคริปต์อัตโนมัติ:
+ท่านสามารถรันการทดสอบ Unit Tests (64 Tests), การประเมิน Synthetic LLM Benchmark, ทดสอบการเชื่อมต่อ MCP Servers (Active Ping), ตรวจสอบสุขภาพแคช และประเมินคุณภาพเอกสารกฎหมายได้ผ่านสคริปต์อัตโนมัติ:
 
 ```bash
-# 1. รันกระบวนการตรวจสอบทั้งหมดในคำสั่งเดียว (Full Pipeline)
+# 1. รันกระบวนการตรวจสอบทั้งหมดในคำสั่งเดียว (Full Pipeline รวม Mock LLM, Ping MCP และ Output Audit)
 ./scripts/run_harness.sh
 # หรือใช้ Make:
 make all
@@ -152,7 +152,15 @@ make all
 หรือเลือกรันเฉพาะคำสั่งที่ต้องการ:
 
 ```bash
-# รันเฉพาะ Unit Tests ทั้งหมด (68/68 ผ่าน 100% ครอบคลุม PDF, DOCX, ODT, Benchmark Cases 1-7 และ Evaluator Classification)
+# รันการจำลองและประเมินผล Synthetic LLM Benchmark ครบทั้ง 10 คดี และ Adversarial Testing
+make synthetic-test
+# หรือ: python3 harness/mock_llm.py (รองรับ flag --case-id, --mode, --json)
+
+# ทดสอบการเชื่อมต่อและความพร้อมใช้งานของ Legal MCP Servers ทั้ง 3 ค่าย (Active Ping Probe)
+make ping-mcp
+# หรือ: python3 scripts/ping_mcp.py (รองรับ flag --json)
+
+# รันเฉพาะ Unit Tests ทั้งหมด (64/64 ผ่าน 100% ครอบคลุม Benchmark Cases 1-10, Mock LLM และ MCP Resilience)
 make test
 # หรือ: python3 -m unittest discover -s tests -p "test_*.py" -v
 
@@ -163,7 +171,7 @@ python3 harness/cache.py --stats
 # ตรวจสอบรายชื่อเลขฎีกาที่ผ่านการตรวจสอบจาก MCP ในฐานข้อมูลแคช (Grounding Oracle)
 python3 harness/cache.py --verified-dekas
 
-# ล้างแคชเฉพาะหมวดหมู่กฎหมาย (Tag-Based Invalidation เช่น หมวดที่ดิน)
+# ล้างแคชเฉพาะหมวดหมู่กฎหมาย (Tag-Based Invalidation เช่น หมวดที่ดิน, ปกครอง, pdpa, ip)
 python3 harness/cache.py --purge-tag land
 
 # สแกนและให้คะแนนเอกสารบทวิเคราะห์ใน output/ ด้วยระบบประเมินผลอัตโนมัติ

@@ -22,9 +22,17 @@ echo "▶ 1. Running Unit & Integration Test Suite..."
 python3 -m unittest discover -s tests -p "test_*.py" -v
 
 echo ""
+echo "▶ 1.5. Running Mock / Synthetic LLM Evaluation Testbed..."
+python3 harness/mock_llm.py
+
+echo ""
 echo "▶ 2. Checking Legal MCP Cache Health & FinOps Telemetry..."
 python3 harness/cache.py --health
 python3 harness/cache.py --stats
+
+echo ""
+echo "▶ 2.5. Probing Active Legal MCP Servers Connectivity..."
+python3 scripts/ping_mcp.py || true
 
 echo ""
 echo "▶ 3. Seeding Verified Research Dekas into Cache..."

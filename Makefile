@@ -1,13 +1,10 @@
-.PHONY: all test stats health audit seed clean init-cache pdf-check
+.PHONY: all test stats health audit seed clean init-cache ping-mcp synthetic-test
 
 all:
 	./scripts/run_harness.sh
 
 init-cache:
 	python3 harness/cache.py --ensure-init
-
-pdf-check:
-	python3 harness/document.py --check-env
 
 test:
 	python3 -m unittest discover -s tests -p "test_*.py" -v
@@ -18,6 +15,12 @@ stats:
 health:
 	python3 harness/cache.py --health
 
+ping-mcp:
+	python3 scripts/ping_mcp.py
+
+synthetic-test:
+	python3 harness/mock_llm.py
+
 seed:
 	python3 harness/evaluator.py --seed-cache
 
@@ -26,3 +29,4 @@ audit: seed
 
 clean:
 	python3 harness/cache.py --prune
+

@@ -78,3 +78,4 @@ tags: [legal-advisor, thai-law, 10-topics, irac, court, supreme-court, deka]
 ## 4. การบันทึกไฟล์ (File Saving)
 - หากผู้ใช้ขอให้บันทึกผลการวิเคราะห์ ให้บันทึกไฟล์ไว้ที่ `./output` เสมอ
 - ใช้การเข้ารหัสแบบ **UTF-8 (Encoding: UTF-8)** เสมอ
+- **หากผู้ใช้ต้องการพิมพ์หรือแปลงเป็น PDF**: ให้ขึ้นข้อความแนะนำแนวทางการใช้โปรแกรมเสริมภายนอก เช่น VS Code Extension (*Markdown PDF*, *Markdown Preview Enhanced*), โปรแกรม Markdown Editor (*Typora*, *Obsidian*, *MarkText*), หรือการสั่งพิมพ์ผ่าน Web Browser (`Ctrl + P`) เป็นต้น

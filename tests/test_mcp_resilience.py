@@ -166,6 +166,27 @@ class TestMcpResilience(unittest.TestCase):
             self.assertEqual(res2["source"], "cache")
             self.assertEqual(res2["status"], "cache_hit")
 
+    def test_ping_mcp_utility_and_schema(self):
+        """ตรวจสอบว่าสคริปต์ ping_mcp.py สามารถอ่านคอนฟิกและสร้างรายงานสุขภาพ MCP ได้ถูกต้อง"""
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        from ping_mcp import ping_all_mcp_servers, format_terminal_table
+
+        results = ping_all_mcp_servers(config_path=MCP_CONFIG_PATH, timeout=5.0)
+        self.assertGreaterEqual(len(results), 3, "Must probe at least 3 MCP servers")
+        
+        server_names = [r["name"] for r in results]
+        self.assertIn("fourcorners-tlex", server_names)
+        self.assertIn("slegaltools-legal-v2", server_names)
+        self.assertIn("thai-legal", server_names)
+
+        for r in results:
+            self.assertIn(r["status"], ["ONLINE", "DEGRADED", "OFFLINE"])
+            self.assertGreaterEqual(r["latency_ms"], 0.0)
+
+        table_str = format_terminal_table(results)
+        self.assertIn("Active Ping Health Card", table_str)
+
 if __name__ == "__main__":
     unittest.main()
 

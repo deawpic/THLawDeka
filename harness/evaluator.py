@@ -10,16 +10,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from harness.verifier import audit_response_for_hallucinations, validate_mermaid_syntax
 
 REQUIRED_10_TOPIC_HEADERS = [
-    r"1\.\s*บทสรุป",
-    r"2\.\s*หมวดหมู่",
-    r"3\.\s*รายการของข้อกฎหมาย",
-    r"4\.\s*ประเภทคดี",
-    r"5\.\s*ประเภทของศาล",
-    r"6\.\s*แนวทางต่อสู้คดีของ(?:\s*ฝ่าย)?\s*โจทก์",
-    r"7\.\s*แนวทางต่อสู้คดีของ(?:\s*ฝ่าย)?\s*จำเลย",
-    r"8\.\s*แนวทางทำคดี.*พนักงานสอบสวน",
-    r"9\.\s*แนวโน้มคำตัดสิน.*ศาลฎีกา",
-    r"10\.\s*คำแนะนำเพิ่มเติม"
+    r"1\.\s*(?:\*\*)?\s*บทสรุป",
+    r"2\.\s*(?:\*\*)?\s*หมวดหมู่",
+    r"3\.\s*(?:\*\*)?\s*รายการของข้อกฎหมาย",
+    r"4\.\s*(?:\*\*)?\s*ประเภทคดี",
+    r"5\.\s*(?:\*\*)?\s*ประเภทของศาล",
+    r"6\.\s*(?:\*\*)?\s*แนวทางต่อสู้คดีของ(?:\s*ฝ่าย)?\s*โจทก์",
+    r"7\.\s*(?:\*\*)?\s*แนวทางต่อสู้คดีของ(?:\s*ฝ่าย)?\s*จำเลย",
+    r"8\.\s*(?:\*\*)?\s*แนวทางทำคดี.*พนักงานสอบสวน",
+    r"9\.\s*(?:\*\*)?\s*แนวโน้มคำตัดสิน.*ศาลฎีกา",
+    r"10\.\s*(?:\*\*)?\s*คำแนะนำเพิ่มเติม"
 ]
 
 class ArtifactType:
@@ -73,6 +73,12 @@ def classify_artifact(filepath_or_name: str, content: str = "") -> Tuple[str, Op
             case_id = "case-04-tort-accident"
         elif any(k in fname for k in ["สมรส", "บุตร"]):
             case_id = "case-06-family-bigamy-child-status"
+        elif any(k in fname for k in ["ปกครอง", "คำสั่งทางปกครอง", "administrative"]):
+            case_id = "case-08-administrative-unlawful-order"
+        elif any(k in fname for k in ["pdpa", "ข้อมูลส่วนบุคคล", "privacy"]):
+            case_id = "case-09-pdpa-unauthorized-disclosure"
+        elif any(k in fname for k in ["เครื่องหมายการค้า", "ทรัพย์สินทางปัญญา", "ip", "trademark"]):
+            case_id = "case-10-ip-trademark-infringement"
         return ArtifactType.FULL_10_TOPICS, case_id
 
     # 5. Comprehensive Analysis
@@ -84,6 +90,12 @@ def classify_artifact(filepath_or_name: str, content: str = "") -> Tuple[str, Op
             case_id = "case-05-land-title-dispute"
         elif any(k in fname for k in ["พรากผู้เยาว์", "319"]):
             case_id = "case-07-statutory-rape-minor"
+        elif any(k in fname for k in ["ปกครอง", "คำสั่งทางปกครอง"]):
+            case_id = "case-08-administrative-unlawful-order"
+        elif any(k in fname for k in ["pdpa", "ข้อมูลส่วนบุคคล"]):
+            case_id = "case-09-pdpa-unauthorized-disclosure"
+        elif any(k in fname for k in ["เครื่องหมายการค้า", "ทรัพย์สินทางปัญญา"]):
+            case_id = "case-10-ip-trademark-infringement"
         return ArtifactType.COMPREHENSIVE_ANALYSIS, case_id
 
     return ArtifactType.COMPREHENSIVE_ANALYSIS, None
@@ -149,8 +161,11 @@ class LegalBenchmarkEvaluator:
 
         # 3. ตรวจสอบประเภทศาล (20 คะแนน)
         competent_court = gt.get("competent_court", "")
-        # สกัดคำสำคัญของศาล เช่น "ศาลแขวง", "ศาลอาญา", "ศาลแรงงาน", "ศาลจังหวัด", "ศาลปกครอง"
-        court_keywords = ["ศาลแขวง", "ศาลอาญา", "ศาลแพ่ง", "ศาลแรงงาน", "ศาลจังหวัด", "ศาลปกครอง"]
+        court_keywords = [
+            "ศาลแขวง", "ศาลอาญา", "ศาลแพ่ง", "ศาลแรงงาน",
+            "ศาลจังหวัด", "ศาลปกครอง", "ศาลเยาวชนและครอบครัว",
+            "ศาลทรัพย์สินทางปัญญา", "คณะกรรมการผู้เชี่ยวชาญ", "สคส"
+        ]
         expected_courts = [c for c in court_keywords if c in competent_court]
         court_matched = any(c in response_text for c in expected_courts)
         rubric_scores["competent_court_accuracy"] = 20.0 if court_matched else 0.0

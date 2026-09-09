@@ -10,10 +10,10 @@ DEKA_CITATION_PATTERNS = [
 
 # Prohibited absolute judicial guarantee phrases (Violates Judicial Discretion Gate)
 ABSOLUTE_GUARANTEE_PATTERNS = [
-    re.compile(r"ชนะคดีแน่นอน\s*(?:100%|ร้อยเปอร์เซ็นต์)?"),
-    re.compile(r"ศาลต้องตัดสินให้ชนะอย่างแน่นอน"),
-    re.compile(r"การันตีผลคดี"),
-    re.compile(r"รับรองผลแพ้ชนะ"),
+    re.compile(r"ชนะ(?:คดี)?(?:อย่าง)?แน่นอน\s*(?:100%|ร้อยเปอร์เซ็นต์)?"),
+    re.compile(r"ศาลต้อง(?:ตัดสิน|พิพากษา|ยกฟ้อง)(?:ให้(?:ท่าน)?ชนะ)?(?:อย่าง)?แน่นอน"),
+    re.compile(r"การันตีผล(?:คดี)?"),
+    re.compile(r"รับรองผล(?:คดี|แพ้ชนะ)?"),
 ]
 
 # Recognized Thai Legal Codes and Acts
