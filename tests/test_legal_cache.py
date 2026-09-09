@@ -365,5 +365,44 @@ class TestLegalMcpCache(unittest.TestCase):
         self.assertGreater(stats["total_cache_hits"], 0)
         self.assertGreater(stats["finops_metrics"]["estimated_latency_saved_sec"], 0)
 
+    def test_check_first_run_detection(self):
+        new_db_path = os.path.join(self.temp_dir, "new_fresh_cache.db")
+        # ก่อนสร้างไฟล์ ต้องตรวจพบว่าเป็นการใช้งานครั้งแรก (True)
+        self.assertTrue(LegalMcpCache.check_first_run(new_db_path))
+
+        # เมื่อสร้าง cache instance ระบบต้องสร้างไฟล์อัตโนมัติ และเซ็ต is_first_run = True
+        cache = LegalMcpCache(db_path=new_db_path)
+        self.assertTrue(cache.is_first_run)
+        self.assertTrue(os.path.exists(new_db_path))
+        self.assertGreater(os.path.getsize(new_db_path), 0)
+
+        # ครั้งถัดไปเมื่อไฟล์มีอยู่แล้ว ต้องตรวจพบว่าไม่ใช่การใช้งานครั้งแรก (False)
+        self.assertFalse(LegalMcpCache.check_first_run(new_db_path))
+        cache_second = LegalMcpCache(db_path=new_db_path)
+        self.assertFalse(cache_second.is_first_run)
+
+    def test_ensure_cache_file_auto_creation(self):
+        new_db_path = os.path.join(self.temp_dir, "auto_created_cache.db")
+        self.assertFalse(os.path.exists(new_db_path))
+
+        # เรียก ensure_cache_file ครั้งแรก ต้องสร้างไฟล์ db และคืนค่า was_first_run = True
+        was_first_run, cache = LegalMcpCache.ensure_cache_file(new_db_path)
+        self.assertTrue(was_first_run)
+        self.assertTrue(os.path.exists(new_db_path))
+        self.assertEqual(cache.get_telemetry_stats()["status"], "healthy")
+
+        # เรียก ensure_cache_file ซ้ำอีกครั้ง ต้องคืนค่า was_first_run = False
+        was_first_run2, cache2 = LegalMcpCache.ensure_cache_file(new_db_path)
+        self.assertFalse(was_first_run2)
+
+    def test_auto_seed_on_first_run(self):
+        seed_db_path = os.path.join(self.temp_dir, "seeded_cache.db")
+        was_first_run, cache = LegalMcpCache.ensure_cache_file(seed_db_path, auto_seed=True)
+        self.assertTrue(was_first_run)
+        stats = cache.get_telemetry_stats()
+        self.assertGreater(stats["total_cached_entries"], 0)
+        verified_dekas = cache.get_all_verified_dekas()
+        self.assertIn("15216/2551", verified_dekas)
+
 if __name__ == "__main__":
     unittest.main()

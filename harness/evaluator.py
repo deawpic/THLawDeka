@@ -201,47 +201,8 @@ class LegalBenchmarkEvaluator:
         return results
 
 def seed_case_research_cache(cache: LegalMcpCache) -> int:
-    """Pre-seed verified Deka search results into cache from known case research"""
-    verified_entries = [
-        {
-            "provider": "slegaltools",
-            "tool_name": "search_cases",
-            "arguments": {"query": "สิทธิครอบครอง ส.ค.1 ส่งมอบ"},
-            "tag": "land",
-            "payload": {
-                "results": [
-                    {"deka_citation": "คำพิพากษาศาลฎีกาที่ 269/2511", "text": "การซื้อขายที่ดินมือเปล่าส่งมอบการครอบครอง"},
-                    {"deka_citation": "คำพิพากษาศาลฎีกาที่ 3071/2554", "text": "ผู้ขายสละการครอบครองส่งมอบที่ดิน"},
-                    {"deka_citation": "คำพิพากษาศาลฎีกาที่ 1164/2514", "text": "สละและโอนการครอบครองตาม ม.1377, 1378"}
-                ]
-            }
-        },
-        {
-            "provider": "thai_legal",
-            "tool_name": "search_court_decisions",
-            "arguments": {"query": "ส.ค.1 น.ส.3 ก. แจ้งความเท็จ"},
-            "tag": "land",
-            "payload": {
-                "results": [
-                    {"deka_citation": "คำพิพากษาศาลฎีกาที่ 15216/2551", "text": "ที่ดิน ส.ค.1 โอนการครอบครองให้ผู้ซื้อ"},
-                    {"deka_citation": "คำพิพากษาศาลฎีกาที่ 3379/2532", "text": "สัญญาโอนการครอบครองโดยมีค่าตอบแทน"},
-                    {"deka_citation": "คำพิพากษาศาลฎีกาที่ 1196/2535", "text": "สิทธิครอบครองตาม ป.พ.พ. ม.456, 1367"}
-                ]
-            }
-        }
-    ]
-    count = 0
-    for entry in verified_entries:
-        success = cache.set(
-            provider=entry["provider"],
-            tool_name=entry["tool_name"],
-            arguments=entry["arguments"],
-            raw_payload=entry["payload"],
-            tag=entry.get("tag", "")
-        )
-        if success:
-            count += 1
-    return count
+    """Pre-seed verified Deka search results and statutes into cache from known case research"""
+    return cache.seed_initial_data()
 
 def main():
     import argparse

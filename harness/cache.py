@@ -102,19 +102,59 @@ class LegalMcpCache:
 
     QUERY_PARAM_KEYS = {"query", "q", "keyword", "keywords", "search_term", "text"}
 
+    @classmethod
+    def resolve_db_path(cls, db_path: Optional[str] = None) -> Path:
+        """แปลง db_path ให้เป็น Absolute Path ที่พร้อมใช้งาน"""
+        if db_path:
+            return Path(db_path).resolve()
+        elif os.getenv("LEGAL_CACHE_DB_PATH"):
+            return Path(os.getenv("LEGAL_CACHE_DB_PATH")).resolve()
+        else:
+            return (Path(__file__).resolve().parent.parent / "cache" / "mcp_cache.db").resolve()
+
+    @classmethod
+    def check_first_run(cls, db_path: Optional[str] = None) -> bool:
+        """
+        ตรวจสอบว่าเป็นการใช้งานครั้งแรกหรือไม่
+        (คืนค่า True หากไฟล์ฐานข้อมูลแคชยังไม่เคยถูกสร้าง หรือมีขนาด 0 ไบต์)
+        """
+        target_path = cls.resolve_db_path(db_path)
+        return (not target_path.exists()) or (target_path.stat().st_size == 0)
+
+    @classmethod
+    def ensure_cache_file(
+        cls,
+        db_path: Optional[str] = None,
+        auto_seed: bool = False,
+        max_memory_items: int = 512,
+        max_size_mb: int = 100
+    ) -> Tuple[bool, "LegalMcpCache"]:
+        """
+        ตรวจการใช้งานครั้งแรก และสร้างไฟล์แคช SQLite อัตโนมัติหากยังไม่มีอยู่
+        คืนค่า: (was_first_run: bool, cache_instance: LegalMcpCache)
+        """
+        was_first_run = cls.check_first_run(db_path=db_path)
+        cache = cls(
+            db_path=str(db_path) if db_path else None,
+            max_memory_items=max_memory_items,
+            max_size_mb=max_size_mb,
+            auto_seed_on_first_run=auto_seed if was_first_run else False
+        )
+        return was_first_run, cache
+
     def __init__(
         self,
         db_path: Optional[str] = None,
         max_memory_items: int = 512,
-        max_size_mb: int = 100
+        max_size_mb: int = 100,
+        auto_seed_on_first_run: bool = False
     ):
-        if db_path:
-            resolved_path = Path(db_path)
-        elif os.getenv("LEGAL_CACHE_DB_PATH"):
-            resolved_path = Path(os.getenv("LEGAL_CACHE_DB_PATH"))
-        else:
-            resolved_path = Path(__file__).resolve().parent.parent / "cache" / "mcp_cache.db"
-        self.db_path = resolved_path.resolve()
+        self.db_path = self.resolve_db_path(db_path)
+
+        # ตรวจสอบการใช้งานครั้งแรก (First-run detection)
+        self.is_first_run = (not self.db_path.exists()) or (self.db_path.stat().st_size == 0)
+
+        # สร้างโฟลเดอร์แม่ (Parent Directory) อัตโนมัติหากยังไม่มี
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self.max_memory_items = max_memory_items
@@ -126,7 +166,14 @@ class LegalMcpCache:
         self._recovery_lock = threading.Lock()
         self._is_recovering = False
 
+        # สร้างไฟล์ฐานข้อมูล ตาราง และดัชนีอัตโนมัติ
         self._init_db()
+
+        if self.is_first_run:
+            logger.info(f"First-run detected: Automatically created cache database at {self.db_path}")
+            if auto_seed_on_first_run:
+                seeded_count = self.seed_initial_data()
+                logger.info(f"First-run auto-seed: Seeded {seeded_count} initial verified legal precedents into cache.")
 
     @contextlib.contextmanager
     def _get_connection(self) -> Generator[sqlite3.Connection, None, None]:
@@ -625,6 +672,86 @@ class LegalMcpCache:
         except sqlite3.DatabaseError as e:
             logger.error(f"Failed during disk budget enforcement: {e}")
 
+    def seed_initial_data(self) -> int:
+        """
+        นำเข้าชุดข้อมูลกฎหมายและฎีกาอ้างอิงเริ่มต้น (Verified Grounding Precedents)
+        เข้าสู่แคช เพื่อให้พร้อมใช้งานทันทีตั้งแต่ First Run
+        """
+        initial_entries = [
+            {
+                "provider": "slegaltools",
+                "tool_name": "search_cases",
+                "arguments": {"query": "สิทธิครอบครอง ส.ค.1 ส่งมอบ"},
+                "tag": "land",
+                "payload": {
+                    "results": [
+                        {"deka_citation": "คำพิพากษาศาลฎีกาที่ 269/2511", "text": "การซื้อขายที่ดินมือเปล่าส่งมอบการครอบครอง"},
+                        {"deka_citation": "คำพิพากษาศาลฎีกาที่ 3071/2554", "text": "ผู้ขายสละการครอบครองส่งมอบที่ดิน"},
+                        {"deka_citation": "คำพิพากษาศาลฎีกาที่ 1164/2514", "text": "สละและโอนการครอบครองตาม ม.1377, 1378"}
+                    ]
+                }
+            },
+            {
+                "provider": "thai_legal",
+                "tool_name": "search_court_decisions",
+                "arguments": {"query": "ส.ค.1 น.ส.3 ก. แจ้งความเท็จ"},
+                "tag": "land",
+                "payload": {
+                    "results": [
+                        {"deka_citation": "คำพิพากษาศาลฎีกาที่ 15216/2551", "text": "ที่ดิน ส.ค.1 โอนการครอบครองให้ผู้ซื้อ"},
+                        {"deka_citation": "คำพิพากษาศาลฎีกาที่ 3379/2532", "text": "สัญญาโอนการครอบครองโดยมีค่าตอบแทน"},
+                        {"deka_citation": "คำพิพากษาศาลฎีกาที่ 1196/2535", "text": "สิทธิครอบครองตาม ป.พ.พ. ม.456, 1367"}
+                    ]
+                }
+            },
+            {
+                "provider": "thai-legal",
+                "tool_name": "search_law",
+                "arguments": {"query": "ป.พ.พ. ม.1378"},
+                "tag": "civil",
+                "payload": {
+                    "statute_title": "ประมวลกฎหมายแพ่งและพาณิชย์ มาตรา 1378",
+                    "content": "การโอนไปซึ่งการครอบครองนั้น ย่อมทำได้โดยส่งมอบทรัพย์สินที่ครอบครอง",
+                    "keywords": ["โอนการครอบครอง", "ส่งมอบทรัพย์สิน"]
+                }
+            },
+            {
+                "provider": "thai-legal",
+                "tool_name": "search_law",
+                "arguments": {"query": "ป.อ. ม.334 ลักทรัพย์"},
+                "tag": "criminal",
+                "payload": {
+                    "statute_title": "ประมวลกฎหมายอาญา มาตรา 334",
+                    "content": "ผู้ใดเอาทรัพย์ของผู้อื่น หรือที่ผู้อื่นเป็นเจ้าของรวมอยู่ด้วยไปโดยทุจริต ผู้นั้นกระทำความผิดฐานลักทรัพย์ ต้องระวางโทษจำคุกไม่เกินสามปี และปรับไม่เกินหกหมื่นบาท",
+                    "keywords": ["ลักทรัพย์", "เอาทรัพย์ของผู้อื่น", "ทุจริต"]
+                }
+            },
+            {
+                "provider": "thai-legal",
+                "tool_name": "search_law",
+                "arguments": {"query": "ป.พ.พ. ม.653 กู้ยืมเงิน"},
+                "tag": "civil",
+                "payload": {
+                    "statute_title": "ประมวลกฎหมายแพ่งและพาณิชย์ มาตรา 653",
+                    "content": "การกู้ยืมเงินกว่าสองพันบาทขึ้นไปนั้น ถ้ามิได้มีหลักฐานแห่งการกู้ยืมเป็นหนังสืออย่างใดอย่างหนึ่งลงลายมือชื่อผู้ยืมเป็นสำคัญ จะฟ้องร้องให้บังคับคดีหาได้ไม่",
+                    "keywords": ["กู้ยืมเงิน", "หลักฐานเป็นหนังสือ", "ลงลายมือชื่อ"]
+                }
+            }
+        ]
+
+        count = 0
+        for entry in initial_entries:
+            success = self.set(
+                provider=entry["provider"],
+                tool_name=entry["tool_name"],
+                arguments=entry["arguments"],
+                raw_payload=entry["payload"],
+                tag=entry.get("tag", "")
+            )
+            if success:
+                count += 1
+        return count
+
     def get_telemetry_stats(self) -> Dict[str, Any]:
         """รวบรวมสถิติประสิทธิภาพ ความเร็ว การบีบอัด และการประหยัด Token สำหรับ Production Monitoring"""
         with self._get_connection() as conn:
@@ -661,6 +788,7 @@ class LegalMcpCache:
 
         return {
             "status": "healthy",
+            "is_first_run": getattr(self, "is_first_run", False),
             "db_path": str(self.db_path),
             "total_cached_entries": entries,
             "total_cache_hits": total_hits,
@@ -704,6 +832,9 @@ def main():
     parser = argparse.ArgumentParser(description="THLawDeka Legal MCP Cache Management CLI")
     parser.add_argument("--stats", action="store_true", help="Print cache telemetry statistics as JSON")
     parser.add_argument("--health", action="store_true", help="Check cache health and connectivity")
+    parser.add_argument("--ensure-init", action="store_true", help="Detect first-run and automatically create/initialize cache database")
+    parser.add_argument("--first-run-check", action="store_true", help="Check whether cache database exists or is first run")
+    parser.add_argument("--seed", action="store_true", help="Seed baseline verified legal precedents into cache")
     parser.add_argument("--prune", action="store_true", help="Prune expired cache entries and vacuum database")
     parser.add_argument("--purge-tag", type=str, default=None, help="Purge all entries associated with a specific legal tag")
     parser.add_argument("--verified-dekas", action="store_true", help="List all verified Deka citations currently stored in cache")
@@ -711,14 +842,49 @@ def main():
     parser.add_argument("--db-path", type=str, default=None, help="Custom database path")
 
     args = parser.parse_args()
+
+    if args.first_run_check:
+        is_first = LegalMcpCache.check_first_run(db_path=args.db_path)
+        resolved = LegalMcpCache.resolve_db_path(args.db_path)
+        print(json.dumps({
+            "status": "success",
+            "is_first_run": is_first,
+            "db_path": str(resolved),
+            "cache_file_exists": resolved.exists() and resolved.stat().st_size > 0
+        }, ensure_ascii=False, indent=2))
+        sys.exit(0)
+
+    if args.ensure_init:
+        was_first_run, cache = LegalMcpCache.ensure_cache_file(db_path=args.db_path, auto_seed=args.seed)
+        file_size = cache.db_path.stat().st_size if cache.db_path.exists() else 0
+        stats = cache.get_telemetry_stats()
+        print(json.dumps({
+            "status": "success",
+            "first_run_detected": was_first_run,
+            "cache_file_created": was_first_run,
+            "db_path": str(cache.db_path),
+            "file_size_bytes": file_size,
+            "total_cached_entries": stats["total_cached_entries"],
+            "message": "First run detected: cache database automatically created and initialized." if was_first_run else "Cache database already exists and is initialized."
+        }, ensure_ascii=False, indent=2))
+        sys.exit(0)
+
     cache = LegalMcpCache(db_path=args.db_path)
 
-    if args.stats:
+    if args.seed:
+        seeded = cache.seed_initial_data()
+        print(json.dumps({
+            "status": "success",
+            "seeded_entries": seeded,
+            "total_cached_entries": cache.get_telemetry_stats()["total_cached_entries"]
+        }, ensure_ascii=False, indent=2))
+        sys.exit(0)
+    elif args.stats:
         print(json.dumps(cache.get_telemetry_stats(), ensure_ascii=False, indent=2))
         sys.exit(0)
     elif args.health:
         stats = cache.get_telemetry_stats()
-        print(json.dumps({"status": stats["status"], "db_path": stats["db_path"], "entries": stats["total_cached_entries"]}, ensure_ascii=False, indent=2))
+        print(json.dumps({"status": stats["status"], "db_path": stats["db_path"], "entries": stats["total_cached_entries"], "is_first_run": stats["is_first_run"]}, ensure_ascii=False, indent=2))
         sys.exit(0)
     elif args.prune:
         pruned = cache.prune_expired()

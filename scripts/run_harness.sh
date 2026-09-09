@@ -14,7 +14,11 @@ echo "⚡ THLawDeka Agent Harness v3.0: Full Verification Pipeline"
 echo "======================================================================"
 
 echo ""
-echo "▶ 1. Running Unit & Integration Test Suite (45 Tests)..."
+echo "▶ 0. Verifying First-Run Status & Ensuring Cache Database..."
+python3 harness/cache.py --ensure-init
+
+echo ""
+echo "▶ 1. Running Unit & Integration Test Suite..."
 python3 -m unittest discover -s tests -p "test_*.py" -v
 
 echo ""
