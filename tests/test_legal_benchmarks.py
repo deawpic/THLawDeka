@@ -239,5 +239,49 @@ class TestLegalBenchmarks(unittest.TestCase):
             )
             self.assertGreaterEqual(r.get("total_score", 0.0), 80.0)
 
+    def test_diagram_table_standards_and_no_ascii(self):
+        """ตรวจสอบว่า AGENTS.md และ legal_advisor ระบุมาตรฐาน Mermaid และ Markdown Table ห้ามใช้ ASCII text"""
+        with open(ROOT_AGENTS_MD_PATH, "r", encoding="utf-8") as f:
+            root_content = f.read()
+        self.assertIn("Mermaid", root_content)
+        self.assertIn("Markdown Table", root_content)
+        self.assertIn("ASCII", root_content)
+        self.assertIn("ห้ามใช้ ASCII", root_content)
+
+        with open(LEGAL_ADVISOR_PATH, "r", encoding="utf-8") as f:
+            advisor_content = f.read()
+        self.assertIn("Mermaid", advisor_content)
+        self.assertIn("Markdown Table", advisor_content)
+        self.assertIn("ห้ามใช้ ASCII", advisor_content)
+
+    def test_chat_only_pdf_export_recommendations(self):
+        """ตรวจสอบว่าคำแนะนำการแปลง PDF ถูกกำหนดให้แสดงใน Chat เท่านั้น ไม่บันทึกลงในไฟล์"""
+        with open(ROOT_AGENTS_MD_PATH, "r", encoding="utf-8") as f:
+            root_content = f.read()
+        self.assertIn("แสดงใน Chat เท่านั้น", root_content)
+        self.assertIn("ไม่ต้องบันทึกลงในไฟล์", root_content)
+        self.assertIn("ห้ามบันทึกคำแนะนำโปรแกรมเสริมในการแปลง PDF ลงในไฟล์", root_content)
+
+        with open(LEGAL_ADVISOR_PATH, "r", encoding="utf-8") as f:
+            advisor_content = f.read()
+        self.assertIn("แสดงในแชทเท่านั้น", advisor_content)
+        self.assertIn("ไม่ต้องบันทึกลงในไฟล์", advisor_content)
+        self.assertIn("ห้ามบันทึกคำแนะนำโปรแกรมเสริมในการแปลง PDF ลงในไฟล์", advisor_content)
+
+    def test_mermaid_syntax_in_all_agent_and_skill_configs(self):
+        """ตรวจสอบว่าบล็อก Mermaid ทั้งหมดใน AGENTS.md และ SKILL.md ผ่านการตรวจสอบไวยากรณ์ 100%"""
+        from harness.verifier import validate_mermaid_syntax
+        
+        for file_path in [
+            ROOT_AGENTS_MD_PATH,
+            AGENTS_MD_PATH,
+            os.path.join(os.path.dirname(__file__), "..", ".agents", "skills", "deka_citation_verifier", "SKILL.md")
+        ]:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            audit = validate_mermaid_syntax(content)
+            self.assertTrue(audit["passed"], f"Mermaid issues in {file_path}: {audit['issues']}")
+            self.assertGreaterEqual(audit["total_diagrams"], 1, f"Expected at least 1 Mermaid diagram in {file_path}")
+
 if __name__ == "__main__":
     unittest.main()
