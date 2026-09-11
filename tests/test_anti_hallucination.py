@@ -9,7 +9,9 @@ from harness.verifier import (
     sanitize_hallucinated_deka_numbers,
     detect_absolute_guarantees,
     audit_response_for_hallucinations,
-    validate_mermaid_syntax
+    validate_mermaid_syntax,
+    validate_markdown_tables,
+    detect_prohibited_ascii
 )
 from harness.cache import LegalMcpCache
 
@@ -142,6 +144,110 @@ class TestAntiHallucination(unittest.TestCase):
                 content = f.read()
             res = validate_mermaid_syntax(content)
             self.assertTrue(res["passed"], f"Saved report has mermaid issues: {res['issues']}")
+
+    def test_markdown_table_valid_passes(self):
+        valid_table = (
+            "| ลำดับ | ประเด็นกฎหมาย | ผลทางคดี |\n"
+            "| :---: | :--- | :--- |\n"
+            "| 1 | สัญญาจะซื้อจะขาย | มีผลบังคับใช้ |\n"
+            "| 2 | เบี้ยปรับ | ศาลมีอำนาจปรับลด |\n"
+        )
+        res = validate_markdown_tables(valid_table)
+        self.assertTrue(res["passed"])
+        self.assertEqual(res["total_tables"], 1)
+        self.assertEqual(len(res["issues"]), 0)
+
+        audit = audit_response_for_hallucinations(valid_table)
+        self.assertTrue(audit["passed"])
+
+    def test_markdown_table_missing_separator_fails(self):
+        broken_table = (
+            "| หัวข้อ 1 | หัวข้อ 2 |\n"
+            "| ข้อมูล 1 | ข้อมูล 2 |\n"
+        )
+        res = validate_markdown_tables(broken_table)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+        self.assertIn("ไม่พบแถวเส้นแบ่ง", res["issues"][0]["error"])
+
+        audit = audit_response_for_hallucinations(broken_table)
+        self.assertFalse(audit["passed"])
+        self.assertTrue(any(v["gate"] == "Markdown Table Gate" for v in audit["violations"]))
+
+    def test_markdown_table_column_mismatch_fails(self):
+        mismatched_table = (
+            "| ข้อ | รายละเอียด | หมายเหตุ |\n"
+            "| :--- | :--- | :--- |\n"
+            "| 1 | ข้อมูลขาดคอลัมน์ |\n"
+        )
+        res = validate_markdown_tables(mismatched_table)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+        self.assertIn("ไม่ตรงกับหัวตาราง", res["issues"][0]["error"])
+
+    def test_markdown_table_unclosed_pipes_fails(self):
+        unclosed_table = (
+            "หัวข้อ 1 | หัวข้อ 2\n"
+            "| :--- | :--- |\n"
+            "| ข้อมูล 1 | ข้อมูล 2 |\n"
+        )
+        res = validate_markdown_tables(unclosed_table)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+
+    def test_prohibited_ascii_box_fails(self):
+        ascii_box_text = (
+            "+--------------------------+\n"
+            "| กล่องข้อความแบบ ASCII     |\n"
+            "+--------------------------+\n"
+        )
+        res = detect_prohibited_ascii(ascii_box_text)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+        self.assertIn("เส้นกรอบกล่อง ASCII", res["issues"][0]["error"])
+
+        audit = audit_response_for_hallucinations(ascii_box_text)
+        self.assertFalse(audit["passed"])
+        self.assertTrue(any(v["gate"] == "Prohibited ASCII Gate" for v in audit["violations"]))
+
+    def test_prohibited_ascii_unicode_box_fails(self):
+        unicode_box_text = (
+            "┌──────────────────────────┐\n"
+            "│ กล่องข้อความ Unicode Box │\n"
+            "└──────────────────────────┘\n"
+        )
+        res = detect_prohibited_ascii(unicode_box_text)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+        self.assertIn("Unicode Box Drawing", res["issues"][0]["error"])
+
+    def test_prohibited_ascii_pseudo_flowchart_fails(self):
+        pseudo_flow_text = "[นาย ก (ผู้ร้อง)] --> [นาย ข (ผู้คัดค้าน)]"
+        res = detect_prohibited_ascii(pseudo_flow_text)
+        self.assertFalse(res["passed"])
+        self.assertGreater(len(res["issues"]), 0)
+        self.assertIn("ผังกล่อง ASCII", res["issues"][0]["error"])
+
+    def test_prohibited_ascii_in_backticks_allowed(self):
+        # ข้อความที่อธิบายกฎโดยอ้างอิงใน inline code backticks ต้องไม่ถูกตรวจจับผิดพลาด (No False Positive)
+        doc_text = "ห้ามใช้เส้นกรอบเช่น `+---+` หรือ `┌─┐` หรือ `[A] --> [B]` ในคำตอบ"
+        res = detect_prohibited_ascii(doc_text)
+        self.assertTrue(res["passed"])
+        self.assertEqual(len(res["issues"]), 0)
+
+    def test_all_output_markdown_files_pass_table_and_ascii_validation(self):
+        import glob
+        output_files = glob.glob(os.path.join(os.path.dirname(__file__), "..", "output", "*.md"))
+        for fpath in output_files:
+            with open(fpath, "r", encoding="utf-8") as f:
+                content = f.read()
+            table_res = validate_markdown_tables(content)
+            self.assertTrue(table_res["passed"], f"File {os.path.basename(fpath)} has table issues: {table_res['issues']}")
+
+            # For legal reports in output, check ascii issues
+            if "spec" not in fpath:
+                ascii_res = detect_prohibited_ascii(content)
+                self.assertTrue(ascii_res["passed"], f"File {os.path.basename(fpath)} has ASCII issues: {ascii_res['issues']}")
 
 if __name__ == "__main__":
     unittest.main()

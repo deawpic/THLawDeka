@@ -7,7 +7,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from harness.verifier import audit_response_for_hallucinations, validate_mermaid_syntax
+from harness.verifier import (
+    audit_response_for_hallucinations,
+    validate_mermaid_syntax,
+    validate_markdown_tables,
+    detect_prohibited_ascii
+)
 
 REQUIRED_10_TOPIC_HEADERS = [
     r"1\.\s*(?:\*\*)?\s*บทสรุป",
@@ -206,7 +211,9 @@ class LegalBenchmarkEvaluator:
             "findings": findings,
             "detected_deka_numbers": audit_res.get("detected_deka_numbers", []),
             "unverified_deka_numbers": audit_res.get("unverified_deka_numbers", []),
-            "mermaid_audit": audit_res.get("mermaid_audit", {})
+            "mermaid_audit": audit_res.get("mermaid_audit", {}),
+            "table_audit": audit_res.get("table_audit", {}),
+            "ascii_audit": audit_res.get("ascii_audit", {})
         }
 
     def evaluate_comprehensive_analysis(
@@ -287,7 +294,9 @@ class LegalBenchmarkEvaluator:
             "findings": findings,
             "detected_deka_numbers": audit_res.get("detected_deka_numbers", []),
             "unverified_deka_numbers": audit_res.get("unverified_deka_numbers", []),
-            "mermaid_audit": audit_res.get("mermaid_audit", {})
+            "mermaid_audit": audit_res.get("mermaid_audit", {}),
+            "table_audit": audit_res.get("table_audit", {}),
+            "ascii_audit": audit_res.get("ascii_audit", {})
         }
 
     def evaluate_deka_research(
@@ -353,7 +362,9 @@ class LegalBenchmarkEvaluator:
             "findings": findings,
             "detected_deka_numbers": audit_res.get("detected_deka_numbers", []),
             "unverified_deka_numbers": audit_res.get("unverified_deka_numbers", []),
-            "mermaid_audit": audit_res.get("mermaid_audit", {})
+            "mermaid_audit": audit_res.get("mermaid_audit", {}),
+            "table_audit": audit_res.get("table_audit", {}),
+            "ascii_audit": audit_res.get("ascii_audit", {})
         }
 
     def evaluate_contract_opinion(
@@ -398,7 +409,7 @@ class LegalBenchmarkEvaluator:
 
         # 4. Practical Strategy (20 คะแนน)
         has_strategy = any(k in response_text for k in ["บอกกล่าว", "notice", "ทวงถาม", "ฟ้อง", "อายุความ", "คำแนะนำ", "ข้อควรระวัง"])
-        rubric_scores["practical_recommendations"] = 20.0 if has_strategy else 10.0
+        rubric_scores["practical_strategy"] = 20.0 if has_strategy else 10.0
 
         total_score = sum(rubric_scores.values())
         passed = total_score >= 80.0 and audit_res["passed"]
@@ -414,7 +425,9 @@ class LegalBenchmarkEvaluator:
             "findings": findings,
             "detected_deka_numbers": audit_res.get("detected_deka_numbers", []),
             "unverified_deka_numbers": audit_res.get("unverified_deka_numbers", []),
-            "mermaid_audit": audit_res.get("mermaid_audit", {})
+            "mermaid_audit": audit_res.get("mermaid_audit", {}),
+            "table_audit": audit_res.get("table_audit", {}),
+            "ascii_audit": audit_res.get("ascii_audit", {})
         }
 
     def evaluate_system_doc(self, response_text: str) -> Dict[str, Any]:
@@ -440,10 +453,19 @@ class LegalBenchmarkEvaluator:
 
         # 3. Visual & Syntax Integrity (30 คะแนน)
         mermaid_audit = validate_mermaid_syntax(response_text)
-        rubric_scores["visual_integrity"] = 30.0 if mermaid_audit["passed"] else 15.0
+        table_audit = validate_markdown_tables(response_text)
+        ascii_audit = detect_prohibited_ascii(response_text)
+        all_passed = mermaid_audit["passed"] and table_audit["passed"] and ascii_audit["passed"]
+        rubric_scores["visual_integrity"] = 30.0 if all_passed else 15.0
         if not mermaid_audit["passed"]:
             for issue in mermaid_audit["issues"]:
                 findings.append(f"Mermaid issue: {issue['error']} - {issue['content']}")
+        if not table_audit["passed"]:
+            for issue in table_audit["issues"]:
+                findings.append(f"Table issue: {issue['error']} - {issue['content']}")
+        if not ascii_audit["passed"]:
+            for issue in ascii_audit["issues"]:
+                findings.append(f"ASCII issue: {issue['error']} - {issue['content']}")
 
         total_score = sum(rubric_scores.values())
         passed = total_score >= 80.0 and len(findings) == 0
@@ -459,7 +481,9 @@ class LegalBenchmarkEvaluator:
             "findings": findings,
             "detected_deka_numbers": [],
             "unverified_deka_numbers": [],
-            "mermaid_audit": mermaid_audit
+            "mermaid_audit": mermaid_audit,
+            "table_audit": table_audit,
+            "ascii_audit": ascii_audit
         }
 
     def evaluate_file(

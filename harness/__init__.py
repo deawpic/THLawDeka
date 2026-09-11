@@ -14,6 +14,9 @@ from harness.verifier import (
     detect_unverified_deka_citations,
     sanitize_hallucinated_deka_numbers,
     detect_absolute_guarantees,
+    validate_mermaid_syntax,
+    validate_markdown_tables,
+    detect_prohibited_ascii,
 )
 from harness.evaluator import LegalBenchmarkEvaluator
 
@@ -28,5 +31,8 @@ __all__ = [
     "detect_unverified_deka_citations",
     "sanitize_hallucinated_deka_numbers",
     "detect_absolute_guarantees",
+    "validate_mermaid_syntax",
+    "validate_markdown_tables",
+    "detect_prohibited_ascii",
     "LegalBenchmarkEvaluator",
 ]

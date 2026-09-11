@@ -23,12 +23,10 @@ EXPECTED_10_TOPICS = [
 
 class TestLegalBenchmarks(unittest.TestCase):
 
-    def test_root_agents_md_mirror_sync(self):
-        """ตรวจสอบว่า AGENTS.md ที่ Root และ .agents/AGENTS.md มีอยู่จริงและมีเนื้อหาตรงกัน 100%"""
+    def test_root_agents_md_single_source_of_truth(self):
+        """ตรวจสอบว่า AGENTS.md ที่ Root เป็น Single Source of Truth ตาม Google Harness Spec และไม่มี .agents/AGENTS.md ซ้ำซ้อน"""
         self.assertTrue(os.path.exists(ROOT_AGENTS_MD_PATH), "Root AGENTS.md must exist")
-        self.assertTrue(os.path.exists(AGENTS_MD_PATH), ".agents/AGENTS.md must exist")
-        with open(ROOT_AGENTS_MD_PATH, "r", encoding="utf-8") as f1, open(AGENTS_MD_PATH, "r", encoding="utf-8") as f2:
-            self.assertEqual(f1.read(), f2.read(), "Root AGENTS.md and .agents/AGENTS.md must be identical")
+        self.assertFalse(os.path.exists(AGENTS_MD_PATH), ".agents/AGENTS.md should be removed to prevent prompt duplication")
 
     def test_benchmark_cases_structure(self):
         self.assertTrue(os.path.exists(BENCHMARK_PATH), "benchmark_cases.json must exist")
@@ -50,8 +48,8 @@ class TestLegalBenchmarks(unittest.TestCase):
             self.assertIn("mcp_search_keywords", gt)
 
     def test_agents_md_contains_all_10_topics(self):
-        self.assertTrue(os.path.exists(AGENTS_MD_PATH), "AGENTS.md must exist")
-        with open(AGENTS_MD_PATH, "r", encoding="utf-8") as f:
+        self.assertTrue(os.path.exists(ROOT_AGENTS_MD_PATH), "AGENTS.md must exist")
+        with open(ROOT_AGENTS_MD_PATH, "r", encoding="utf-8") as f:
             content = f.read()
         
         for topic in EXPECTED_10_TOPICS:
@@ -274,7 +272,6 @@ class TestLegalBenchmarks(unittest.TestCase):
         
         for file_path in [
             ROOT_AGENTS_MD_PATH,
-            AGENTS_MD_PATH,
             os.path.join(os.path.dirname(__file__), "..", ".agents", "skills", "deka_citation_verifier", "SKILL.md")
         ]:
             with open(file_path, "r", encoding="utf-8") as f:
